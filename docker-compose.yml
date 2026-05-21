@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  trainer:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: bird-classifier-backend:latest
+    container_name: bird-classifier-trainer
+    command: python train/train.py
+    volumes:
+      - models_volume:/models
+      - dataset_volume:/dataset
+    environment:
+      - MODEL_DIR=${MODEL_DIR:-/models}
+      - MODEL_FILE=${MODEL_FILE:-bird_classifier.pt}
+      - CLASSES_FILE=${CLASSES_FILE:-classes.json}
+      - MODEL_NAME=${MODEL_NAME:-resnet50}
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: bird-classifier-backend:latest
+    container_name: bird-classifier-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - models_volume:/models
+      - dataset_volume:/dataset
+    environment:
+      - MODEL_DIR=${MODEL_DIR:-/models}
+      - MODEL_FILE=${MODEL_FILE:-bird_classifier.pt}
+      - CLASSES_FILE=${CLASSES_FILE:-classes.json}
+      - MODEL_NAME=${MODEL_NAME:-resnet50}
+    depends_on:
+      - trainer
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: bird-classifier-frontend:latest
+    container_name: bird-classifier-frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  models_volume:
+    name: bird_classifier_models
+  dataset_volume:
+    name: bird_classifier_dataset

@@ -1,0 +1,111 @@
+import os
+import logging
+import requests
+import streamlit as st
+from PIL import Image
+import io
+
+# Setup simple logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("streamlit_app")
+
+# Page config
+st.set_page_config(
+    page_title="OrnithoAI - Bird Classifier",
+    page_icon="🐦",
+    layout="centered",
+    initial_sidebar_state="collapsed"
+)
+
+# Header
+st.title("🐦 OrnithoAI")
+st.caption("Deep Learning Bird Species Classifier")
+st.write("---")
+
+# Retrieve backend endpoint from environment
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+
+# Diagnostic check for backend connection
+try:
+    health_response = requests.get(f"{BACKEND_URL}/health", timeout=3)
+    if health_response.status_code == 200:
+        backend_connected = True
+    else:
+        backend_connected = False
+except Exception:
+    backend_connected = False
+
+# Layout - Split into two sections (Upload & Visuals)
+if not backend_connected:
+    st.error("⚠️ Connection Error: Unable to connect to the backend server. Please ensure the backend container is running and healthy.")
+else:
+    # 1. Main file upload area
+    uploaded_file = st.file_uploader("Upload a bird image to classify", type=["jpg", "jpeg", "png"])
+    
+    if uploaded_file is not None:
+        try:
+            # Load and display image
+            image = Image.open(uploaded_file)
+            
+            # Use two equal columns for a clean side-by-side layout
+            col1, col2 = st.columns([1, 1], gap="large")
+            
+            with col1:
+                st.subheader("Uploaded Image")
+                # Scale image nicely keeping aspect ratio
+                st.image(image, use_column_width=True)
+                
+            with col2:
+                st.subheader("Classification Results")
+                
+                # Convert image to bytes for POST request
+                img_byte_arr = io.BytesIO()
+                # Determine correct format (default JPEG)
+                img_format = image.format if image.format else "JPEG"
+                image.save(img_byte_arr, format=img_format)
+                img_byte_arr = img_byte_arr.getvalue()
+                
+                # Prepare payload
+                files = {"image": (uploaded_file.name, img_byte_arr, f"image/{img_format.lower()}")}
+                
+                with st.spinner("Analyzing plumage and details..."):
+                    try:
+                        response = requests.post(f"{BACKEND_URL}/predict", files=files, timeout=30)
+                        
+                        if response.status_code == 200:
+                            data = response.json()
+                            predictions = data.get("predictions", [])
+                            
+                            if predictions:
+                                # Top prediction highlighted in a metric card
+                                top_prediction = predictions[0]
+                                st.metric(
+                                    label="Top Species Match",
+                                    value=top_prediction["species"].title(),
+                                    delta=f"{top_prediction['confidence'] * 100:.1f}% Confidence"
+                                )
+                                
+                                st.write("---")
+                                st.write("**Top Species Candidates**")
+                                
+                                # Show top-5 candidates with native Streamlit progress bars
+                                for pred in predictions:
+                                    species = pred["species"].title()
+                                    confidence = pred["confidence"]
+                                    
+                                    # Native progress bar with clean labels
+                                    st.write(f"**{species}** • {confidence * 100:.1f}%")
+                                    st.progress(confidence)
+                            else:
+                                st.warning("No predictions returned from the server.")
+                        else:
+                            st.error(f"Backend API Error (Status {response.status_code}): {response.text}")
+                    except requests.exceptions.Timeout:
+                        st.error("Request timed out. The backend took too long to respond.")
+                    except Exception as e:
+                        st.error(f"Inference request failed: {str(e)}")
+                        
+        except Exception as e:
+            st.error(f"Could not open uploaded image: {str(e)}")
+stream_version = st.__version__
+logger.info(f"Streamlit App loaded using version {stream_version}")
