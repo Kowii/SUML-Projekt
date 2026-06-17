@@ -14,14 +14,45 @@ st.set_page_config(
     page_title="OrnithoAI - Bird Classifier",
     page_icon="🐦",
     layout="centered",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# Header
+# --- PANEL BOCZNY (SIDEBAR) ---
+with st.sidebar:
+    st.header("ℹ️ O aplikacji")
+    st.info(
+        "Projekt zaliczeniowy z przedmiotu SUML. "
+        "Aplikacja wykorzystuje model głębokiego uczenia "
+        "do klasyfikacji obrazów i rozpoznawania gatunków ptaków."
+    )
+    st.divider()
+    st.subheader("🛠️ Zespół projektowy")
+    st.write("- Michał Pavlovs s26701")
+    st.write("- Kacper Kowieski s27794")
+    st.write("- Michał Wereszczyński s27570")
+
+# --- GŁÓWNY NAGŁÓWEK ---
 st.title("🐦 OrnithoAI")
 st.caption("Deep Learning Bird Species Classifier")
 st.write("---")
 
+# --- SEKCJA INSTRUKTAŻOWA ---
+st.markdown("""
+### Odkryj sekrety ornitologii 🌿
+Wgraj wyraźne zdjęcie ptaka, a nasz system przeanalizuje jego sylwetkę i upierzenie, aby błyskawicznie dopasować go do bazy znanych gatunków.
+""")
+
+col_a, col_b, col_c = st.columns(3)
+with col_a:
+    st.success("📸 **1. Wgraj**\n\nDodaj zdjęcie w formacie JPG lub PNG.")
+with col_b:
+    st.warning("🧠 **2. Przeanalizuj**\n\nBackend wyciąga cechy obrazu.")
+with col_c:
+    st.info("📊 **3. Sprawdź**\n\nOtrzymujesz top dopasowań.")
+
+st.write("---")
+
+# --- POŁĄCZENIE Z BACKENDEM ---
 # Retrieve backend endpoint from environment
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
@@ -35,11 +66,11 @@ try:
 except Exception:
     backend_connected = False
 
-# Layout - Split into two sections (Upload & Visuals)
+# --- LOGIKA GŁÓWNA ---
 if not backend_connected:
     st.error("⚠️ Connection Error: Unable to connect to the backend server. Please ensure the backend container is running and healthy.")
 else:
-    # 1. Main file upload area
+    # Main file upload area
     uploaded_file = st.file_uploader("Upload a bird image to classify", type=["jpg", "jpeg", "png"])
     
     if uploaded_file is not None:
@@ -107,5 +138,6 @@ else:
                         
         except Exception as e:
             st.error(f"Could not open uploaded image: {str(e)}")
+
 stream_version = st.__version__
 logger.info(f"Streamlit App loaded using version {stream_version}")
