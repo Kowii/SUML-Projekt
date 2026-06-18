@@ -35,70 +35,108 @@ OrnithoAI is a modular, containerized machine learning application designed for 
 │   │   ├── __init__.py
 │   │   └── train.py           # Pretrained ImageNet dummy model generator
 │   ├── .dockerignore          # Exclude caches, environment, weights
-│   ├── Dockerfile             # Multi-stage-like Python 3.11 Dockerfile (Exposes FastAPI)
+│   ├── Dockerfile             # Python 3.13 Dockerfile (Exposes FastAPI on port 8000)
 │   └── requirements.txt       # fastapi, uvicorn, torch, torchvision, timm, pillow
 ├── frontend/
-│   ├── app.py                 # Clean, minimal Streamlit UI with image preview & progress bars
+│   ├── app.py                 # Streamlit UI with image preview & top-5 prediction bars
 │   ├── .dockerignore          # Exclude caches
-│   ├── Dockerfile             # Streamlit Dockerfile (Exposes port 8501)
+│   ├── Dockerfile             # Python 3.13 Dockerfile (Exposes Streamlit on port 8501)
 │   └── requirements.txt       # streamlit, requests, pillow
 ├── docker-compose.yml         # Defines backend, frontend, trainer, healthchecks, and volumes
-├── .env.example               # Template environment configuration
-├── .env                       # Local environment configuration
-└── README.md                  # Detailed startup and orchestration instructions
+├── pyproject.toml             # Ruff (linter/formatter) and Pylint configuration
+├── run.sh                     # Local run script for Linux/macOS
+├── run_dla_windowsiakow.ps1   # Local run script for Windows (PowerShell)
+├── .env.example               # Template environment configuration — copy to .env before running
+└── README.md                  # This file
 ```
 
 ---
 
 ## 🚀 Getting Started
 
-### 📋 Prerequisites
-Make sure you have [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/) installed on your machine.
+### 🐳 Option A — Docker (recommended)
 
-### 🛠️ Building & Starting the Application
-Initialize and boot all components with a single command:
+Make sure you have [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/) installed.
+
+Copy the environment template:
+```bash
+cp .env.example .env
+```
+
+Build and start all services with a single command:
 ```bash
 docker compose up --build -d
 ```
 
 This triggers the following sequence:
-1. **Model Generation**: The `trainer` service compiles `backend/train/train.py`, downloads a pretrained `resnet50` backbone, resets the classification layer to the target class list, saves weights to the shared `models_volume`, and exits cleanly.
-2. **API Startup**: The `backend` container boots up, waits for the trainer to output weights, successfully loads the weights onto the detected hardware device (CUDA or CPU), and marks itself healthy once the `/health` endpoint is alive.
-3. **Frontend Boot**: The `frontend` Streamlit container boots up once the backend container registers a `healthy` status, exposing the UI.
+1. **Model Generation**: The `trainer` service runs `backend/train/train.py`, downloads a pretrained `resnet50` backbone, saves weights to the shared `models_volume`, and exits.
+2. **API Startup**: The `backend` container waits for the trainer weights, loads them onto the detected hardware (CUDA or CPU), and marks itself healthy.
+3. **Frontend Boot**: The `frontend` Streamlit container starts once the backend is healthy.
 
-### 🌐 Interfacing with the Services
-- **Streamlit Frontend**: Open your browser and navigate to **`http://localhost:8501`**.
-- **FastAPI Documentation (Swagger UI)**: Navigate to **`http://localhost:8000/docs`**.
-- **Backend Health Check**: Access **`http://localhost:8000/health`**.
-
-### 🛑 Stopping the Application
-To stop the services and retain the generated model weights:
+**Stop and retain model weights:**
 ```bash
 docker compose down
 ```
 
-To stop services and completely wipe the persistent model volume and datasets:
+**Stop and wipe all volumes:**
 ```bash
 docker compose down -v
 ```
 
 ---
 
+### 🐍 Option B — Local (Python 3.13 + venv)
+
+**Prerequisites:** Python 3.13, `pip`.
+
+Create and activate a virtual environment, then install all dependencies:
+```bash
+python3.13 -m venv .venv_suml
+source .venv_suml/bin/activate          # Linux/macOS
+# .venv_suml\Scripts\Activate.ps1      # Windows PowerShell
+
+pip install -r backend/requirements.txt -r frontend/requirements.txt
+```
+
+Copy the environment template:
+```bash
+cp .env.example .env
+```
+
+**Linux/macOS** — start everything with one script:
+```bash
+./run.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy Bypass -File run_dla_windowsiakow.ps1
+```
+
+Both scripts run the trainer, wait for the backend to become healthy, then start the frontend.
+
+---
+
+## 🌐 Service URLs
+
+| Service | URL |
+|---------|-----|
+| Streamlit Frontend | http://localhost:8501 |
+| FastAPI Swagger UI | http://localhost:8000/docs |
+| Backend Health Check | http://localhost:8000/health |
+
+---
+
 ## 🔍 Verification & Troubleshooting
 
-### Viewing Service Statuses
-Verify all containers are up and running cleanly with:
+**Check container statuses (Docker):**
 ```bash
 docker compose ps
 ```
-The statuses for `bird-classifier-backend` and `bird-classifier-frontend` should show `healthy`.
+Both `bird-classifier-backend` and `bird-classifier-frontend` should show `healthy`.
 
-### Monitoring Container Logs
-Inspect logs of the trainer generating weights and backend loading them:
+**Monitor logs (Docker):**
 ```bash
-# Check trainer output
 docker logs bird-classifier-trainer
-
-# Follow backend loading and startup checks
 docker logs -f bird-classifier-backend
 ```

@@ -1,9 +1,10 @@
-import os
+import io
 import logging
+import os
+
 import requests
 import streamlit as st
 from PIL import Image
-import io
 
 # Setup simple logging
 logging.basicConfig(level=logging.INFO)
@@ -72,41 +73,41 @@ if not backend_connected:
 else:
     # Main file upload area
     uploaded_file = st.file_uploader("Upload a bird image to classify", type=["jpg", "jpeg", "png"])
-    
+
     if uploaded_file is not None:
         try:
             # Load and display image
             image = Image.open(uploaded_file)
-            
+
             # Use two equal columns for a clean side-by-side layout
             col1, col2 = st.columns([1, 1], gap="large")
-            
+
             with col1:
                 st.subheader("Uploaded Image")
                 # Scale image nicely keeping aspect ratio
-                st.image(image, use_column_width=True)
-                
+                st.image(image, width="stretch")
+
             with col2:
                 st.subheader("Classification Results")
-                
+
                 # Convert image to bytes for POST request
                 img_byte_arr = io.BytesIO()
                 # Determine correct format (default JPEG)
                 img_format = image.format if image.format else "JPEG"
                 image.save(img_byte_arr, format=img_format)
                 img_byte_arr = img_byte_arr.getvalue()
-                
+
                 # Prepare payload
                 files = {"image": (uploaded_file.name, img_byte_arr, f"image/{img_format.lower()}")}
-                
+
                 with st.spinner("Analyzing plumage and details..."):
                     try:
                         response = requests.post(f"{BACKEND_URL}/predict", files=files, timeout=30)
-                        
+
                         if response.status_code == 200:
                             data = response.json()
                             predictions = data.get("predictions", [])
-                            
+
                             if predictions:
                                 # Top prediction highlighted in a metric card
                                 top_prediction = predictions[0]
@@ -115,15 +116,15 @@ else:
                                     value=top_prediction["species"].title(),
                                     delta=f"{top_prediction['confidence'] * 100:.1f}% Confidence"
                                 )
-                                
+
                                 st.write("---")
                                 st.write("**Top Species Candidates**")
-                                
+
                                 # Show top-5 candidates with native Streamlit progress bars
                                 for pred in predictions:
                                     species = pred["species"].title()
                                     confidence = pred["confidence"]
-                                    
+
                                     # Native progress bar with clean labels
                                     st.write(f"**{species}** • {confidence * 100:.1f}%")
                                     st.progress(confidence)
@@ -135,9 +136,9 @@ else:
                         st.error("Request timed out. The backend took too long to respond.")
                     except Exception as e:
                         st.error(f"Inference request failed: {str(e)}")
-                        
+
         except Exception as e:
             st.error(f"Could not open uploaded image: {str(e)}")
 
 stream_version = st.__version__
-logger.info(f"Streamlit App loaded using version {stream_version}")
+logger.info("Streamlit App loaded using version %s", stream_version)
