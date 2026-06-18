@@ -13,4 +13,4 @@ indent-style = "space"
 py-version = "3.11"
 
 [tool.pylint."messages control"]
-disable = ["C0114", "C0115", "C0116"]
+disable = []

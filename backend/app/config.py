@@ -1,9 +1,19 @@
+"""Application configuration loaded from environment variables or .env file."""
+
 import os
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    """Pydantic settings model — values are read from environment or .env file."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
     MODEL_DIR: str = "/models"
     MODEL_FILE: str = "bird_classifier.pt"
     CLASSES_FILE: str = "classes.json"
@@ -13,13 +23,10 @@ class Settings(BaseSettings):
 
     @property
     def model_path(self) -> str:
+        """Return the absolute path to the PyTorch weights file."""
         return os.path.join(self.MODEL_DIR, self.MODEL_FILE)
 
     @property
     def classes_path(self) -> str:
+        """Return the absolute path to the JSON class-mapping file."""
         return os.path.join(self.MODEL_DIR, self.CLASSES_FILE)
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"

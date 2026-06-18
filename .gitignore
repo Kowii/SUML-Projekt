@@ -1,6 +1,10 @@
 .env
 models/
 
+# Dataset images (add your bird images to data/raw/{class}/ — they are intentionally not tracked)
+data/raw/**
+!data/raw/**/.gitkeep
+
 # IDE
 .idea/
 .vscode/

@@ -1,0 +1,1 @@
+"""OrnithoAI backend application package."""

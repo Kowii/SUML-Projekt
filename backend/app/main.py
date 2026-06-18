@@ -1,3 +1,5 @@
+"""FastAPI application entry point — wires up lifespan, routes, and inference service."""
+
 import asyncio
 import logging
 import os
@@ -23,7 +25,8 @@ settings = Settings()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(fastapi_app: FastAPI):
+    """Poll for model files on startup, load them into app state, then yield."""
     model_path = settings.model_path
     classes_path = settings.classes_path
 
@@ -61,9 +64,9 @@ async def lifespan(app: FastAPI):
             model_name=settings.MODEL_NAME,
         )
         service.load_model()
-        app.state.inference_service = service
+        fastapi_app.state.inference_service = service
         logger.info("FastAPI initialization completed successfully.")
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         logger.critical("FATAL ERROR: Failed to load model: %s", str(e), exc_info=True)
         sys.exit(1)
 

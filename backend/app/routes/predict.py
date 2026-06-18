@@ -1,3 +1,5 @@
+"""Prediction route — accepts an uploaded bird image and returns top-K species."""
+
 import io
 import logging
 
@@ -11,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 @router.post("/predict", response_model=PredictionResponse)
 async def predict_bird(request: Request, image: UploadFile = File(...)):
+    """Validate the uploaded image and return top-K species predictions."""
     # 1. Validate file extension/mime type
     if not image.content_type.startswith("image/"):
         logger.warning("Rejected non-image upload attempt with MIME type: %s", image.content_type)
@@ -33,4 +36,4 @@ async def predict_bird(request: Request, image: UploadFile = File(...)):
         raise HTTPException(
             status_code=500,
             detail=f"An error occurred during image classification: {str(e)}"
-        )
+        ) from e

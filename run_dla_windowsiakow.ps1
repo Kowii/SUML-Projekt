@@ -14,7 +14,9 @@ New-Item -ItemType Directory -Force -Path $ModelsDir | Out-Null
 
 # --- TRAINER ---
 Write-Host ">>> Running trainer..."
-$env:MODEL_DIR = $ModelsDir
+$env:PYTHONPATH   = $ScriptDir
+$env:MODEL_DIR    = $ModelsDir
+$env:DATASET_DIR  = "$ScriptDir\data\raw"
 & $Python "$ScriptDir\backend\train\train.py"
 Write-Host ">>> Trainer done."
 

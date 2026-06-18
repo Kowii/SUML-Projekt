@@ -23,7 +23,10 @@ mkdir -p "$MODELS_DIR"
 
 # --- TRAINER ---
 echo ">>> Running trainer..."
-MODEL_DIR="$MODELS_DIR" "$PYTHON" "$SCRIPT_DIR/backend/train/train.py"
+PYTHONPATH="$SCRIPT_DIR" \
+    MODEL_DIR="$MODELS_DIR" \
+    DATASET_DIR="$SCRIPT_DIR/data/raw" \
+    "$PYTHON" "$SCRIPT_DIR/backend/train/train.py"
 echo ">>> Trainer done."
 
 # --- BACKEND ---

@@ -1,3 +1,5 @@
+"""Streamlit frontend for the OrnithoAI bird species classifier."""
+
 import io
 import logging
 import os
@@ -60,16 +62,16 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 # Diagnostic check for backend connection
 try:
     health_response = requests.get(f"{BACKEND_URL}/health", timeout=3)
-    if health_response.status_code == 200:
-        backend_connected = True
-    else:
-        backend_connected = False
-except Exception:
-    backend_connected = False
+    BACKEND_CONNECTED = health_response.status_code == 200
+except requests.exceptions.RequestException:
+    BACKEND_CONNECTED = False
 
 # --- LOGIKA GŁÓWNA ---
-if not backend_connected:
-    st.error("⚠️ Connection Error: Unable to connect to the backend server. Please ensure the backend container is running and healthy.")
+if not BACKEND_CONNECTED:
+    st.error(
+        "⚠️ Connection Error: Unable to connect to the backend server. "
+        "Please ensure the backend container is running and healthy."
+    )
 else:
     # Main file upload area
     uploaded_file = st.file_uploader("Upload a bird image to classify", type=["jpg", "jpeg", "png"])
@@ -131,13 +133,16 @@ else:
                             else:
                                 st.warning("No predictions returned from the server.")
                         else:
-                            st.error(f"Backend API Error (Status {response.status_code}): {response.text}")
+                            st.error(
+                                f"Backend API Error (Status {response.status_code}): "
+                                f"{response.text}"
+                            )
                     except requests.exceptions.Timeout:
                         st.error("Request timed out. The backend took too long to respond.")
-                    except Exception as e:
+                    except (requests.exceptions.RequestException, ValueError) as e:
                         st.error(f"Inference request failed: {str(e)}")
 
-        except Exception as e:
+        except OSError as e:
             st.error(f"Could not open uploaded image: {str(e)}")
 
 stream_version = st.__version__
