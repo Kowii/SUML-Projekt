@@ -21,14 +21,6 @@ trap cleanup INT TERM
 
 mkdir -p "$MODELS_DIR"
 
-# --- TRAINER ---
-echo ">>> Running trainer..."
-PYTHONPATH="$SCRIPT_DIR" \
-    MODEL_DIR="$MODELS_DIR" \
-    DATASET_DIR="$SCRIPT_DIR/data/raw" \
-    "$PYTHON" "$SCRIPT_DIR/backend/train/train.py"
-echo ">>> Trainer done."
-
 # --- BACKEND ---
 echo ">>> Starting backend..."
 MODEL_DIR="$MODELS_DIR" PYTHONPATH="$SCRIPT_DIR/backend" \

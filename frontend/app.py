@@ -42,7 +42,8 @@ st.write("---")
 # --- SEKCJA INSTRUKTAŻOWA ---
 st.markdown("""
 ### Odkryj sekrety ornitologii 🌿
-Wgraj wyraźne zdjęcie ptaka, a nasz system przeanalizuje jego sylwetkę i upierzenie, aby błyskawicznie dopasować go do bazy znanych gatunków.
+Wgraj wyraźne zdjęcie ptaka, a nasz system przeanalizuje jego sylwetkę i upierzenie,
+aby błyskawicznie dopasować go do bazy znanych gatunków.
 """)
 
 col_a, col_b, col_c = st.columns(3)
@@ -87,7 +88,7 @@ else:
             with col1:
                 st.subheader("Uploaded Image")
                 # Scale image nicely keeping aspect ratio
-                st.image(image, width="stretch")
+                st.image(image, use_container_width=True)
 
             with col2:
                 st.subheader("Classification Results")

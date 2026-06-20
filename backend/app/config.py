@@ -1,8 +1,12 @@
 """Application configuration loaded from environment variables or .env file."""
 
 import os
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Katalog projektu: backend/app/config.py -> backend/app -> backend -> project root
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
 class Settings(BaseSettings):
@@ -14,7 +18,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    MODEL_DIR: str = "/models"
+    MODEL_DIR: str = str(_PROJECT_ROOT / "models")
     MODEL_FILE: str = "bird_classifier.pt"
     CLASSES_FILE: str = "classes.json"
     MODEL_NAME: str = "resnet50"

@@ -105,3 +105,55 @@ Konfiguracja pylinta jest też w `pyproject.toml`:
 [tool.pylint."messages control"]
 disable = ["C0114", "C0115", "C0116"]   # pomija brak docstringów
 ```
+
+---
+
+## Trening modelu — jak to działa
+
+### ResNet50 — co to jest?
+
+ResNet50 to gotowa sieć neuronowa wytrenowana przez Meta na **1,2 miliona zdjęć** (ImageNet — koty, psy, samochody, itd.). Ma 50 warstw i "wie" jak rozpoznawać kształty, tekstury, kontury. My jej nie tworzymy od zera — **pobieramy gotowe wagi**.
+
+Wyobraź sobie to tak: ResNet50 to kucharz, który umie gotować wszystko. Chcemy go "przekwalifikować" żeby specjalizował się tylko w ptakach.
+
+---
+
+### Dwufazowy fine-tuning — co dokładnie robimy
+
+**Faza 1 — trenujemy TYLKO ostatnią warstwę (głowę klasyfikatora)**
+
+```
+[ResNet50 zamrożony — wagi nie zmieniają się]
+         ↓
+[Nowa warstwa FC: 2048 → 200 klas ptaków]  ← tylko to się uczy
+```
+
+ResNet50 ma na końcu warstwę `fc` (fully connected), która pierwotnie klasyfikuje 1000 klas ImageNet. Wycinamy ją i wstawiamy nową — 200 wyjść (200 gatunków ptaków z CUB-200-2011). Reszta sieci jest **zamrożona** — jej wagi się nie zmieniają.
+
+Trwa ~5 epok, szybko, niska stopa uczenia `1e-3`.
+
+---
+
+**Faza 2 — odmrażamy CAŁĄ sieć i fine-tunujemy wszystko**
+
+```
+[ResNet50 odmrożony — wszystkie wagi mogą się zmieniać]
+         ↓
+[Warstwa FC: 2048 → 200 klas]
+```
+
+Teraz cała sieć się uczy, ale bardzo powoli (`1e-4` — 10x mniejsza stopa). Chodzi o to żeby delikatnie "dostroić" już nauczone cechy do ptaków, a nie zniszczyć tego co ResNet50 już wie.
+
+Trwa ~20 epok.
+
+---
+
+### Dlaczego tak a nie inaczej?
+
+| Podejście | Problem |
+|---|---|
+| Trening od zera | Potrzeba milionów zdjęć i tygodni GPU |
+| Fine-tuning tylko głowy | Szybko, ale mniej dokładny |
+| **Dwufazowy fine-tuning** | **Najlepszy balans — to co robimy** |
+
+Dataset CUB-200-2011 ma tylko ~60 zdjęć na klasę (razem ~12 000). Przy takim małym zbiorze trening od zera dałby fatalny wynik. Dlatego korzystamy z wiedzy którą ResNet50 już ma.
