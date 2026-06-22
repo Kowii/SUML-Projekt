@@ -1,6 +1,7 @@
 """Modern, premium Streamlit frontend for the OrnithoAI bird species classifier."""
 
 import io
+import json
 import logging
 import os
 import requests
@@ -223,6 +224,79 @@ def inject_custom_css():
             border: 1px solid rgba(0, 0, 0, 0.03);
         }
     }
+
+    /* Grid layout for Encyclopedia search results */
+    .encyclopedia-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+    }
+
+    .encyclopedia-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .encyclopedia-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16, 185, 129, 0.3);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    @media (prefers-color-scheme: light) {
+        .encyclopedia-card {
+            background: rgba(0, 0, 0, 0.015);
+            border: 1px solid rgba(0, 0, 0, 0.04);
+        }
+        .encyclopedia-card:hover {
+            background: rgba(0, 0, 0, 0.025);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+    }
+
+    .encyclopedia-card-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #10b981;
+        margin-bottom: 4px;
+    }
+
+    .encyclopedia-card-sub {
+        font-size: 0.85rem;
+        color: #9ca3af;
+        font-style: italic;
+        margin-bottom: 12px;
+    }
+
+    @media (prefers-color-scheme: light) {
+        .encyclopedia-card-sub {
+            color: #6b7280;
+        }
+    }
+
+    .encyclopedia-card-actions {
+        display: flex;
+        gap: 10px;
+        font-size: 0.85rem;
+    }
+
+    .encyclopedia-card-actions a {
+        text-decoration: none;
+        color: #06b6d4;
+        font-weight: 600;
+    }
+
+    .encyclopedia-card-actions a:hover {
+        color: #0891b2;
+        text-decoration: underline;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -242,6 +316,45 @@ def check_backend_health(url):
         return False
 
 backend_healthy = check_backend_health(BACKEND_URL)
+
+# --- BIRD NAMES DICTIONARY MAPPING ---
+names_file = os.path.join(os.path.dirname(__file__), "bird_names_pl.json")
+try:
+    with open(names_file, encoding="utf-8") as f:
+        BIRD_NAMES_MAPPING = json.load(f)
+except Exception as e:
+    logger.error("Failed to load bird names mapping: %s", str(e))
+    BIRD_NAMES_MAPPING = {}
+
+FAMILY_TRANSLATIONS = {
+    "Albatross": "Albatrosy (Albatrosses)",
+    "Auklet": "Auklety (Auklets)",
+    "Blackbird": "Kosy i Kacyki (Blackbirds)",
+    "Bunting": "Lazurniki i Trznadle (Buntings)",
+    "Cardinal": "Kardynały (Cardinals)",
+    "Catbird": "Miauczyki (Catbirds)",
+    "Cormorant": "Kormorany (Cormorants)",
+    "Flycatcher": "Muchołówki (Flycatchers)",
+    "Gull": "Mewy (Gulls)",
+    "Hummingbird": "Kolibry (Hummingbirds)",
+    "Jay": "Sójki (Jays)",
+    "Kingfisher": "Zimorodki (Kingfishers)",
+    "Loon": "Nury (Loons)",
+    "Nuthatch": "Kowaliki (Nuthatches)",
+    "Oriole": "Wilgi (Orioles)",
+    "Pelican": "Pelikany (Pelicans)",
+    "Pewee": "Kontusie (Pewees)",
+    "Puffin": "Maskonury (Puffins)",
+    "Sparrow": "Pasówki i Wróble (Sparrows)",
+    "Swallow": "Jaskółkowate (Swallows)",
+    "Tanager": "Tanagry (Tanagers)",
+    "Tern": "Rybitwy (Terns)",
+    "Thrasher": "Drozdniki (Thrashers)",
+    "Vireo": "Wireonki (Vireos)",
+    "Warbler": "Lasówki (Warblers)",
+    "Woodpecker": "Dzięciołowate (Woodpeckers)",
+    "Wren": "Strzyżyki (Wrens)"
+}
 
 # --- PANEL BOCZNY (SIDEBAR) ---
 with st.sidebar:
@@ -271,7 +384,7 @@ with st.sidebar:
     else:
         st.error("🔴 Brak połączenia z API")
 
-    # Clear button
+    # Reset button
     if st.button("🔄 Resetuj aplikację", use_container_width=True):
         st.session_state.active_image_bytes = None
         st.session_state.active_image_name = None
@@ -302,197 +415,279 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# --- ZDJĘCIA PRZYKŁADOWE (EXAMPLES) ---
-EXAMPLES = {
-    "Tukan żółtogardły": {
-        "url": "https://images.unsplash.com/photo-1551085254-e96b210db58a?w=600&auto=format&fit=crop&q=80",
-        "description": "Tukan żółtogardły",
-        "filename": "tukan.jpg"
-    },
-    "Europejski rudzik": {
-        "url": "https://images.unsplash.com/photo-1591608971362-f08b2a75731a?q=80&w=880&auto=format&fit=crop&q=80",
-        "description": "Drobny ptak z czerwoną piersią",
-        "filename": "rudzik.jpg"
-    },
-    "Bielik amerykański": {
-        "url": "https://images.unsplash.com/photo-1611689342806-0863700ce1e4?w=600&auto=format&fit=crop&q=80",
-        "description": "Potężny orzeł amerykański",
-        "filename": "bielik.jpg"
-    },
-    "Kruk zwyczajny": {
-        "url": "https://images.unsplash.com/photo-1682467612877-f9b5e55ff2af?q=80&w=764&auto=format&fit&q=80",
-        "description": "Inteligentny kruk zwyczajny",
-        "filename": "kruk.jpg"
+# --- TABS LAYOUT ---
+tab_classifier, tab_encyclopedia = st.tabs(["🔍 Klasyfikator AI", "📚 Baza gatunków (200 klas)"])
+
+with tab_classifier:
+    # --- ZDJĘCIA PRZYKŁADOWE (EXAMPLES) ---
+    EXAMPLES = {
+        "Miauczyk szary": {
+            "url": "https://images.unsplash.com/photo-1734630155396-2c476389a948?w=600&auto=format&fit=crop&q=80",
+            "description": "Miauczyk szary",
+            "filename": "miauczyk.jpg"
+        },
+        "Europejski rudzik": {
+            "url": "https://images.unsplash.com/photo-1591608971362-f08b2a75731a?q=80&w=880&auto=format&fit=crop&q=80",
+            "description": "Drobny ptak z czerwoną piersią",
+            "filename": "rudzik.jpg"
+        },
+        "Ziębnik purpurowy": {
+            "url": "https://images.unsplash.com/photo-1663204166873-3ecd09eb3d91?w=600&auto=format&fit=crop&q=80",
+            "description": "Ziębnik purpurowy",
+            "filename": "finch.jpg"
+        },
+        "Kruk zwyczajny": {
+            "url": "https://images.unsplash.com/photo-1682467612877-f9b5e55ff2af?q=80&w=764&auto=format&fit&q=80",
+            "description": "Kruk zwyczajny",
+            "filename": "kruk.jpg"
+        }
     }
-}
 
-# Session state initialization
-if "active_image_bytes" not in st.session_state:
-    st.session_state.active_image_bytes = None
-if "active_image_name" not in st.session_state:
-    st.session_state.active_image_name = None
+    # Session state initialization
+    if "active_image_bytes" not in st.session_state:
+        st.session_state.active_image_bytes = None
+    if "active_image_name" not in st.session_state:
+        st.session_state.active_image_name = None
 
-st.write("### ⚡ Szybki test na przykładach")
-cols = st.columns(len(EXAMPLES))
-for idx, (name, info) in enumerate(EXAMPLES.items()):
-    with cols[idx]:
-        st.image(info["url"], width="content", caption=info["description"])
-        if st.button(f"Wybierz: {name}", key=f"ex_btn_{idx}", use_container_width=True):
-            with st.spinner("Pobieranie zdjęcia przykładowego..."):
-                try:
-                    res = requests.get(info["url"], timeout=10)
-                    if res.status_code == 200:
-                        st.session_state.active_image_bytes = res.content
-                        st.session_state.active_image_name = info["filename"]
-                        st.rerun()
-                    else:
-                        st.error("Nie udało się pobrać zdjęcia przykładowego.")
-                except Exception as e:
-                    st.error(f"Błąd pobierania: {str(e)}")
-
-st.markdown("<br>", unsafe_allow_html=True)
-st.write("---")
-st.markdown("<br>", unsafe_allow_html=True)
-
-# Helper function to format species names nicely
-def format_species_name(name: str) -> str:
-    # Handle folder name fallback like "119.House_Sparrow"
-    if "." in name:
-        name = name.split(".", 1)[-1]
-    return name.replace("_", " ").strip().capitalize()
-
-# Helper to render custom colored progress bars
-def render_progress_bar(label: str, confidence: float):
-    # Determine color scale
-    if confidence >= 0.70:
-        color = "linear-gradient(90deg, #10b981, #059669)" # Strong Green
-    elif confidence >= 0.35:
-        color = "linear-gradient(90deg, #f59e0b, #d97706)" # Amber Orange
-    else:
-        color = "linear-gradient(90deg, #6b7280, #4b5563)" # Soft Grey
-        
-    percentage = confidence * 100
-    st.markdown(f"""
-    <div class="custom-bar-container">
-        <div class="custom-bar-labels">
-            <span>{label}</span>
-            <span>{percentage:.1f}%</span>
-        </div>
-        <div class="custom-bar-outer">
-            <div class="custom-bar-inner" style="width: {percentage}%; background: {color};"></div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# --- SEKCJA GŁÓWNA (WGRYWANIE / ANALIZA) ---
-if not backend_healthy:
-    st.error(
-        "⚠️ Błąd połączenia: Nie można nawiązać komunikacji z serwerem backendowym API.\n\n"
-        "Upewnij się, że kontener backendu działa i pomyślnie wczytał pliki wag modelu."
-    )
-else:
-    # File Uploader
-    uploaded_file = st.file_uploader(
-        "Przeciągnij i upuść lub wybierz z dysku zdjęcie ptaka", 
-        type=["jpg", "jpeg", "png"],
-        help="Obsługiwane formaty: PNG, JPG, JPEG."
-    )
-    
-    if uploaded_file is not None:
-        file_bytes = uploaded_file.getvalue()
-        if st.session_state.active_image_bytes != file_bytes:
-            st.session_state.active_image_bytes = file_bytes
-            st.session_state.active_image_name = uploaded_file.name
-            st.rerun()
-
-    # If we have an active image (uploaded or selected from example)
-    if st.session_state.active_image_bytes is not None:
-        try:
-            image = Image.open(io.BytesIO(st.session_state.active_image_bytes))
-            
-            # Create two columns (left: image card, right: results card)
-            main_col1, main_col2 = st.columns([1, 1], gap="large")
-            
-            with main_col1:
-                st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-                st.markdown("### 📷 Podgląd zdjęcia")
-                st.image(image, width="content")
-                st.markdown(f"**Nazwa pliku:** `{st.session_state.active_image_name}`")
-                st.markdown('</div>', unsafe_allow_html=True)
-                
-            with main_col2:
-                st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-                st.markdown("### 📊 Wyniki klasyfikacji")
-                
-                # Convert image to bytes for API post
-                img_byte_arr = io.BytesIO()
-                image.save(img_byte_arr, format="JPEG")
-                img_byte_arr = img_byte_arr.getvalue()
-                
-                files = {
-                    "image": (
-                        st.session_state.active_image_name, 
-                        img_byte_arr, 
-                        "image/jpeg"
-                    )
-                }
-                
-                with st.spinner("Analiza szczegółów upierzenia przez model AI..."):
+    st.write("### ⚡ Szybki test na przykładach")
+    cols = st.columns(len(EXAMPLES))
+    for idx, (name, info) in enumerate(EXAMPLES.items()):
+        with cols[idx]:
+            st.image(info["url"], width="content", caption=info["description"])
+            if st.button(f"Wybierz: {name}", key=f"ex_btn_{idx}", use_container_width=True):
+                with st.spinner("Pobieranie zdjęcia przykładowego..."):
                     try:
-                        response = requests.post(f"{BACKEND_URL}/predict", files=files, timeout=30)
-                        
-                        if response.status_code == 200:
-                            data = response.json()
-                            predictions = data.get("predictions", [])
-                            
-                            if predictions:
-                                # Render Top Match Winner Card
-                                top_pred = predictions[0]
-                                top_name_raw = top_pred["species"]
-                                top_name = format_species_name(top_name_raw)
-                                top_confidence = top_pred["confidence"]
-                                
-                                st.markdown(f"""
-                                <div class="winner-card">
-                                    <div class="winner-badge">Najbardziej dopasowany</div>
-                                    <div class="winner-name">{top_name}</div>
-                                    <div class="winner-conf">{top_confidence * 100:.1f}% pewności</div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                
-                                # Other candidates list
-                                st.markdown("#### Prawdopodobne gatunki:")
-                                for pred in predictions:
-                                    name_fmt = format_species_name(pred["species"])
-                                    render_progress_bar(name_fmt, pred["confidence"])
-                                    
-                                st.markdown("<br>", unsafe_allow_html=True)
-                                
-                                # Wikipedia button
-                                wiki_url = f"https://pl.wikipedia.org/wiki/Special:Search?search={top_name}"
-                                st.link_button(
-                                    f"📖 Dowiedz się więcej o: {top_name} (Wikipedia)",
-                                    wiki_url,
-                                    use_container_width=True,
-                                    type="primary"
-                                )
-                                
-                            else:
-                                st.warning("Serwer nie zwrócił żadnych predykcji.")
+                        res = requests.get(info["url"], timeout=10)
+                        if res.status_code == 200:
+                            st.session_state.active_image_bytes = res.content
+                            st.session_state.active_image_name = info["filename"]
+                            st.rerun()
                         else:
-                            st.error(
-                                f"Błąd API Backend (Status {response.status_code}): "
-                                f"{response.text}"
-                            )
-                    except requests.exceptions.Timeout:
-                        st.error("Przekroczono limit czasu połączenia. Backend nie odpowiedział w wyznaczonym czasie.")
+                            st.error("Nie udało się pobrać zdjęcia przykładowego.")
                     except Exception as e:
-                        st.error(f"Nie udało się wysłać zapytania: {str(e)}")
-                        
-                st.markdown('</div>', unsafe_allow_html=True)
+                        st.error(f"Błąd pobierania: {str(e)}")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.write("---")
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Helper function to format species names nicely
+    def format_species_name(name: str) -> str:
+        # Handle folder name fallback like "119.House_Sparrow"
+        if "." in name:
+            name = name.split(".", 1)[-1]
+        return name.replace("_", " ").strip().capitalize()
+
+    # Helper to render custom colored progress bars
+    def render_progress_bar(label: str, confidence: float):
+        # Determine color scale
+        if confidence >= 0.70:
+            color = "linear-gradient(90deg, #10b981, #059669)" # Strong Green
+        elif confidence >= 0.35:
+            color = "linear-gradient(90deg, #f59e0b, #d97706)" # Amber Orange
+        else:
+            color = "linear-gradient(90deg, #6b7280, #4b5563)" # Soft Grey
+            
+        percentage = confidence * 100
+        st.markdown(
+            f'<div class="custom-bar-container">'
+            f'<div class="custom-bar-labels"><span>{label}</span><span>{percentage:.1f}%</span></div>'
+            f'<div class="custom-bar-outer">'
+            f'<div class="custom-bar-inner" style="width: {percentage}%; background: {color};"></div>'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+    # --- SEKCJA GŁÓWNA (WGRYWANIE / ANALIZA) ---
+    if not backend_healthy:
+        st.error(
+            "⚠️ Błąd połączenia: Nie można nawiązać komunikacji z serwerem backendowym API.\n\n"
+            "Upewnij się, że kontener backendu działa i pomyślnie wczytał pliki wag modelu."
+        )
+    else:
+        # File Uploader
+        uploaded_file = st.file_uploader(
+            "Przeciągnij i upuść lub wybierz z dysku zdjęcie ptaka", 
+            type=["jpg", "jpeg", "png"],
+            help="Obsługiwane formaty: PNG, JPG, JPEG."
+        )
+        
+        if uploaded_file is not None:
+            file_bytes = uploaded_file.getvalue()
+            if st.session_state.active_image_bytes != file_bytes:
+                st.session_state.active_image_bytes = file_bytes
+                st.session_state.active_image_name = uploaded_file.name
+                st.rerun()
+
+        # If we have an active image (uploaded or selected from example)
+        if st.session_state.active_image_bytes is not None:
+            try:
+                image = Image.open(io.BytesIO(st.session_state.active_image_bytes))
                 
-        except Exception as e:
-            st.error(f"Nie udało się załadować obrazu: {str(e)}")
+                # Create two columns (left: image card, right: results card)
+                main_col1, main_col2 = st.columns([1, 1], gap="large")
+                
+                with main_col1:
+                    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+                    st.markdown("### 📷 Podgląd zdjęcia")
+                    st.image(image, width="content")
+                    st.markdown(f"**Nazwa pliku:** `{st.session_state.active_image_name}`")
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    
+                with main_col2:
+                    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+                    st.markdown("### 📊 Wyniki klasyfikacji")
+                    
+                    # Convert image to bytes for API post
+                    img_byte_arr = io.BytesIO()
+                    image.save(img_byte_arr, format="JPEG")
+                    img_byte_arr = img_byte_arr.getvalue()
+                    
+                    files = {
+                        "image": (
+                            st.session_state.active_image_name, 
+                            img_byte_arr, 
+                            "image/jpeg"
+                        )
+                    }
+                    
+                    with st.spinner("Analiza szczegółów upierzenia przez model AI..."):
+                        try:
+                            response = requests.post(f"{BACKEND_URL}/predict", files=files, timeout=30)
+                            
+                            if response.status_code == 200:
+                                data = response.json()
+                                predictions = data.get("predictions", [])
+                                
+                                if predictions:
+                                    # Render Top Match Winner Card
+                                    top_pred = predictions[0]
+                                    top_name_raw = top_pred["species"]
+                                    top_name = format_species_name(top_name_raw)
+                                    top_confidence = top_pred["confidence"]
+                                    
+                                    st.markdown(
+                                        f'<div class="winner-card">'
+                                        f'<div class="winner-badge">Najbardziej dopasowany</div>'
+                                        f'<div class="winner-name">{top_name}</div>'
+                                        f'<div class="winner-conf">{top_confidence * 100:.1f}% pewności</div>'
+                                        f'</div>',
+                                        unsafe_allow_html=True
+                                    )
+                                    
+                                    # Other candidates list
+                                    st.markdown("#### Prawdopodobne gatunki:")
+                                    for pred in predictions:
+                                        name_fmt = format_species_name(pred["species"])
+                                        render_progress_bar(name_fmt, pred["confidence"])
+                                        
+                                    st.markdown("<br>", unsafe_allow_html=True)
+                                    
+                                    # Wikipedia button
+                                    wiki_url = f"https://pl.wikipedia.org/wiki/Special:Search?search={top_name}"
+                                    st.link_button(
+                                        f"📖 Dowiedz się więcej o: {top_name} (Wikipedia)",
+                                        wiki_url,
+                                        use_container_width=True,
+                                        type="primary"
+                                    )
+                                    
+                                else:
+                                    st.warning("Serwer nie zwrócił żadnych predykcji.")
+                            else:
+                                st.error(
+                                    f"Błąd API Backend (Status {response.status_code}): "
+                                    f"{response.text}"
+                                )
+                        except requests.exceptions.Timeout:
+                            st.error("Przekroczono limit czasu połączenia. Backend nie odpowiedział w wyznaczonym czasie.")
+                        except Exception as e:
+                            st.error(f"Nie udało się wysłać zapytania: {str(e)}")
+                            
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    
+            except Exception as e:
+                st.error(f"Nie udało się załadować obrazu: {str(e)}")
+
+with tab_encyclopedia:
+    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+    st.markdown("### 📚 Encyklopedia obsługiwanych gatunków")
+    st.write(
+        "Nasz model potrafi zidentyfikować **200 różnych klas ptaków**. Poniżej możesz wyszukiwać "
+        "gatunki po nazwie polskiej lub angielskiej, przejść do artykułów na Wikipedii oraz obejrzeć galerie zdjęć."
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Search bar
+    search_query = st.text_input("🔍 Wyszukaj ptaka po nazwie polskiej lub angielskiej", "")
+
+    # Clean and filter bird names
+    filtered_birds = []
+    for key, pl_name in BIRD_NAMES_MAPPING.items():
+        eng_name = key.split(".", 1)[-1].replace("_", " ")
+        if not search_query or search_query.lower() in pl_name.lower() or search_query.lower() in eng_name.lower():
+            filtered_birds.append((pl_name, eng_name))
+
+    # Show search results
+    if search_query:
+        st.subheader(f"🔍 Wyniki wyszukiwania ({len(filtered_birds)})")
+        if filtered_birds:
+            # HTML card display
+            html_cards = []
+            for pl, eng in filtered_birds:
+                wiki_link = f"https://pl.wikipedia.org/wiki/Special:Search?search={pl}"
+                google_link = f"https://www.google.com/search?tbm=isch&q={pl}"
+                card_html = (
+                    f'<div class="encyclopedia-card">'
+                    f'<div>'
+                    f'<div class="encyclopedia-card-title">{pl}</div>'
+                    f'<div class="encyclopedia-card-sub">{eng}</div>'
+                    f'</div>'
+                    f'<div class="encyclopedia-card-actions">'
+                    f'<a href="{wiki_link}" target="_blank">📖 Wikipedia</a>'
+                    f'<a href="{google_link}" target="_blank">📷 Google Grafika</a>'
+                    f'</div>'
+                    f'</div>'
+                )
+                html_cards.append(card_html)
+            
+            # Draw grid
+            st.markdown(f'<div class="encyclopedia-grid">{"".join(html_cards)}</div>', unsafe_allow_html=True)
+        else:
+            st.info("Brak gatunków odpowiadających Twojemu wyszukiwaniu.")
+    else:
+        # Default view: Group by family
+        st.subheader("📁 Kategorie ptaków w naszej bazie")
+        
+        families = {}
+        for key, pl_name in BIRD_NAMES_MAPPING.items():
+            eng_name = key.split(".", 1)[-1].replace("_", " ")
+            family = eng_name.split()[-1] if eng_name.split() else "Inne"
+            if family not in families:
+                families[family] = []
+            families[family].append((pl_name, eng_name))
+
+        # Sort families alphabetically
+        sorted_families = sorted(families.items())
+        
+        # Split into columns for balanced layout
+        cols = st.columns(2, gap="medium")
+        for idx, (family, members) in enumerate(sorted_families):
+            col_idx = idx % 2
+            family_pl = FAMILY_TRANSLATIONS.get(family, f"{family}s")
+            
+            with cols[col_idx]:
+                with st.expander(f"🪶 {family_pl} ({len(members)} gatunków)"):
+                    for pl, eng in sorted(members):
+                        wiki_link = f"https://pl.wikipedia.org/wiki/Special:Search?search={pl}"
+                        google_link = f"https://www.google.com/search?tbm=isch&q={pl}"
+                        st.markdown(
+                            f"**{pl}** — *{eng}* &nbsp;&nbsp;|&nbsp;&nbsp; "
+                            f"[Wikipedia 📖]({wiki_link}) &nbsp;&nbsp;|&nbsp;&nbsp; "
+                            f"[Google Grafika 📷]({google_link})"
+                        )
+                        st.divider()
 
 # Log streamlit load
 stream_version = st.__version__
