@@ -69,7 +69,7 @@ docker compose up --build -d
 ```
 
 This triggers the following sequence:
-1. **Model Generation**: The `trainer` service runs `backend/train/train.py`, downloads a pretrained `resnet50` backbone, saves weights to the shared `models_volume`, and exits.
+1. **Model Generation**: The `trainer` service runs `backend/train/train.py`, downloads a pretrained `resnet50` backbone, saves weights to the shared `./models` directory, and exits (unless `SKIP_TRAIN` is set to `true`).
 2. **API Startup**: The `backend` container waits for the trainer weights, loads them onto the detected hardware (CUDA or CPU), and marks itself healthy.
 3. **Frontend Boot**: The `frontend` Streamlit container starts once the backend is healthy.
 
@@ -78,9 +78,10 @@ This triggers the following sequence:
 docker compose down
 ```
 
-**Stop and wipe all volumes:**
+**Wipe model weights:**
+Simply delete the `./models/` folder from the host directory.
 ```bash
-docker compose down -v
+rm -rf models/
 ```
 
 ---

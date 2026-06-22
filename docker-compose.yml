@@ -2,31 +2,33 @@ services:
   trainer:
     build:
       context: .
-      dockerfile: Dockerfile.trainer
+      dockerfile: ./backend/Dockerfile.trainer
     container_name: bird-classifier-trainer
     volumes:
       - ./data/raw:/dataset
-      - models_volume:/models
+      - ./models:/models
     environment:
       - MODEL_DIR=${MODEL_DIR:-/models}
       - MODEL_FILE=${MODEL_FILE:-bird_classifier.pt}
       - CLASSES_FILE=${CLASSES_FILE:-classes.json}
       - MODEL_NAME=${MODEL_NAME:-resnet18}
-      - DATASET_DIR=/dataset
+      - DATASET_DIR=${DATASET_DIR:-/dataset/CUB_200_2011/images}
       - BATCH_SIZE=${BATCH_SIZE:-32}
       - NUM_EPOCHS=${NUM_EPOCHS:-5}
       - LEARNING_RATE=${LEARNING_RATE:-1e-3}
+      - BIRD_NAMES_FILE=${BIRD_NAMES_FILE:-/app/data/bird_names_pl.json}
+      - SKIP_TRAIN=${SKIP_TRAIN:-True}
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
     image: bird-classifier-backend:latest
     container_name: bird-classifier-backend
     ports:
       - "8000:8000"
     volumes:
-      - models_volume:/models
+      - ./models:/models
     environment:
       - MODEL_DIR=${MODEL_DIR:-/models}
       - MODEL_FILE=${MODEL_FILE:-bird_classifier.pt}
@@ -35,11 +37,11 @@ services:
     depends_on:
       - trainer
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 15s
+      retries: 2
+      start_period: 5s
 
   frontend:
     build:
@@ -55,11 +57,7 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8501/_stcore/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
-
-volumes:
-  models_volume:
-    name: bird_classifier_models
