@@ -88,7 +88,7 @@ else:
             with col1:
                 st.subheader("Uploaded Image")
                 # Scale image nicely keeping aspect ratio
-                st.image(image, use_container_width=True)
+                st.image(image, width="content")
 
             with col2:
                 st.subheader("Classification Results")
