@@ -69,23 +69,28 @@ def run_epoch(  # pylint: disable=too-many-arguments,too-many-positional-argumen
     criterion: nn.Module,
     optimizer: torch.optim.Optimizer | None,
     device: torch.device,
+    scaler: torch.amp.GradScaler,
     desc: str = "",
 ) -> tuple[float, float]:
     """Run one training or validation epoch; return (avg_loss, top1_accuracy)."""
     is_training = optimizer is not None
     model.train(is_training)
     total_loss, correct, total = 0.0, 0, 0
+    use_amp = device.type == "cuda"
 
     with torch.set_grad_enabled(is_training):
         for images, labels in tqdm(loader, desc=desc, leave=False, ncols=90):
             images, labels = images.to(device), labels.to(device)
-            outputs = model(images)
-            loss = criterion(outputs, labels)
+
+            with torch.amp.autocast(device_type=device.type, enabled=use_amp):
+                outputs = model(images)
+                loss = criterion(outputs, labels)
 
             if is_training and optimizer is not None:
                 optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
 
             total_loss += loss.item() * len(labels)
             correct += (outputs.argmax(dim=1) == labels).sum().item()
@@ -254,6 +259,8 @@ def main() -> None:  # pylint: disable=too-many-locals,too-many-statements
 
     model = build_model(model_name, num_classes=len(classes)).to(device)
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    use_amp = device.type == "cuda"
+    scaler = torch.amp.GradScaler(enabled=use_amp)
 
     history: list[dict] = []
     best_val_acc = 0.0
@@ -263,16 +270,16 @@ def main() -> None:  # pylint: disable=too-many-locals,too-many-statements
     # ── Faza 1: tylko głowica ────────────────────────────────────────────────
     logger.info("=== Faza 1: trenowanie głowicy (%d epok, lr=%.4f) ===", phase1_epochs, phase1_lr)
     trainable = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.Adam(trainable, lr=phase1_lr)
+    optimizer = torch.optim.AdamW(trainable, lr=phase1_lr, weight_decay=1e-4)
 
     for epoch in range(1, phase1_epochs + 1):
         t0 = time.time()
         train_loss, train_acc = run_epoch(
-            model, train_loader, criterion, optimizer, device,
+            model, train_loader, criterion, optimizer, device, scaler,
             desc=f"P1 E{epoch}/{phase1_epochs} train",
         )
         val_loss, val_acc = run_epoch(
-            model, val_loader, criterion, None, device,
+            model, val_loader, criterion, None, device, scaler,
             desc=f"P1 E{epoch}/{phase1_epochs} val",
         )
         elapsed = time.time() - t0
@@ -293,17 +300,17 @@ def main() -> None:  # pylint: disable=too-many-locals,too-many-statements
     for param in model.parameters():
         param.requires_grad = True
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=phase2_lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=phase2_lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=phase2_epochs)
 
     for epoch in range(1, phase2_epochs + 1):
         t0 = time.time()
         train_loss, train_acc = run_epoch(
-            model, train_loader, criterion, optimizer, device,
+            model, train_loader, criterion, optimizer, device, scaler,
             desc=f"P2 E{epoch}/{phase2_epochs} train",
         )
         val_loss, val_acc = run_epoch(
-            model, val_loader, criterion, None, device,
+            model, val_loader, criterion, None, device, scaler,
             desc=f"P2 E{epoch}/{phase2_epochs} val",
         )
         scheduler.step()
