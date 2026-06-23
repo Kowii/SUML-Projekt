@@ -6,7 +6,7 @@ OrnithoAI is a modular, containerized machine learning application designed for 
 
 ## 🌟 Key Features
 
-1. **Pretrained ImageNet Baseline**: The training service instantiates a pretrained ImageNet backbone (default: `resnet50`) via `timm`, dynamically resets the classification head to the target classes (sparrow, robin, pigeon, eagle, seagull), and saves the weights to allow immediate prediction serving.
+1. **Pretrained ImageNet Baseline**: The training service instantiates a pretrained ImageNet backbone (default: `resnet50`) via `torchvision.models`, fine-tunes it in two phases on the **CUB-200-2011** dataset (200 bird species), and saves the weights to allow immediate prediction serving.
 2. **Dynamic Non-Blocking Backend Startup**: The backend polls for the shared model files upon startup with standard Python `logging`. If they are not found within **5 minutes (300s)**, the startup sequence times out and aborts safely to prevent deadlocks.
 3. **Non-Blocking Inference Loop**: PyTorch image preprocessing and forward propagation tasks are offloaded to background threads using `asyncio.to_thread`. This keeps the main FastAPI event loop fully free to handle concurrent requests.
 4. **Auto CUDA Fallback**: The inference service automatically detects GPU compatibility (`cuda`), routing calculations to CUDA when available and falling back transparently to CPU.
@@ -33,7 +33,7 @@ OrnithoAI is a modular, containerized machine learning application designed for 
 │   │       └── inference.py   # Inference service with CUDA/CPU detection & thread safety
 │   ├── train/
 │   │   ├── __init__.py
-│   │   └── train.py           # Pretrained ImageNet dummy model generator
+│   │   └── train.py           # Two-phase fine-tuning: frozen head → full backbone (ResNet + AdamW + AMP)
 │   ├── .dockerignore          # Exclude caches, environment, weights
 │   ├── Dockerfile             # Python 3.13 Dockerfile (Exposes FastAPI on port 8000)
 │   └── requirements.txt       # fastapi, uvicorn, torch, torchvision, timm, pillow
@@ -49,6 +49,21 @@ OrnithoAI is a modular, containerized machine learning application designed for 
 ├── .env.example               # Template environment configuration — copy to .env before running
 └── README.md                  # This file
 ```
+
+---
+
+## 📦 Dataset
+
+This project uses the **CUB-200-2011** (Caltech-UCSD Birds) dataset — 11,788 images across 200 bird species.
+
+1. Download it from the [official source](https://www.vision.caltech.edu/datasets/cub_200_2011/) or via:
+   ```bash
+   wget https://data.caltech.edu/records/65de6-vp158/files/CUB_200_2011.tgz
+   tar -xzf CUB_200_2011.tgz -C data/raw/
+   ```
+2. The expected directory structure is `data/raw/CUB_200_2011/images/<class_folder>/*.jpg`.
+
+> **Note:** Neither the dataset nor the model weights are included in the repository (size). Run the trainer service first to generate `models/bird_classifier.pt` before starting the backend.
 
 ---
 

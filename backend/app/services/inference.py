@@ -6,8 +6,8 @@ import logging
 from typing import Any
 
 import torch
-import torch.nn as nn
 from PIL import Image
+from torch import nn
 from torchvision import models, transforms
 
 logger = logging.getLogger(__name__)

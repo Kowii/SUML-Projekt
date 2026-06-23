@@ -11,7 +11,7 @@ services:
       - MODEL_DIR=${MODEL_DIR:-/models}
       - MODEL_FILE=${MODEL_FILE:-bird_classifier.pt}
       - CLASSES_FILE=${CLASSES_FILE:-classes.json}
-      - MODEL_NAME=${MODEL_NAME:-resnet18}
+      - MODEL_NAME=${MODEL_NAME:-resnet50}
       - DATASET_DIR=${DATASET_DIR:-/dataset/CUB_200_2011/images}
       - BATCH_SIZE=${BATCH_SIZE:-32}
       - NUM_EPOCHS=${NUM_EPOCHS:-5}
@@ -33,7 +33,7 @@ services:
       - MODEL_DIR=${MODEL_DIR:-/models}
       - MODEL_FILE=${MODEL_FILE:-bird_classifier.pt}
       - CLASSES_FILE=${CLASSES_FILE:-classes.json}
-      - MODEL_NAME=${MODEL_NAME:-resnet18}
+      - MODEL_NAME=${MODEL_NAME:-resnet50}
     depends_on:
       - trainer
     healthcheck:

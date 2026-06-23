@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import os
+
 import requests
 import streamlit as st
 from PIL import Image
@@ -41,7 +42,7 @@ def inject_custom_css():
         margin-bottom: 0px;
         text-align: center;
     }
-    
+
     .header-subtitle {
         color: #9ca3af;
         font-weight: 400;
@@ -208,7 +209,7 @@ def inject_custom_css():
         border-radius: 8px;
         transition: width 0.8s cubic-bezier(0.1, 0.8, 0.2, 1);
     }
-    
+
     /* Sidebar enhancements */
     .sidebar-section {
         background: rgba(255, 255, 255, 0.03);
@@ -361,7 +362,7 @@ with st.sidebar:
     st.image("https://images.unsplash.com/photo-1452570053594-1b985d6ea890?w=300&auto=format&fit=crop&q=80", width="content")
     st.markdown('<div class="header-title" style="font-size: 1.8rem; text-align: left;">OrnithoAI</div>', unsafe_allow_html=True)
     st.caption("Inteligentny asystent rozpoznawania ptaków")
-    
+
     st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### ℹ️ O aplikacji")
     st.write(
@@ -370,7 +371,7 @@ with st.sidebar:
         "na podstawie zdjęć."
     )
     st.markdown('</div>', unsafe_allow_html=True)
-    
+
     st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### 🛠️ Zespół projektowy (SUML)")
     st.markdown("- **Michał Pavlovs** (s26701)")
@@ -487,7 +488,7 @@ with tab_classifier:
             color = "linear-gradient(90deg, #f59e0b, #d97706)" # Amber Orange
         else:
             color = "linear-gradient(90deg, #6b7280, #4b5563)" # Soft Grey
-            
+
         percentage = confidence * 100
         st.markdown(
             f'<div class="custom-bar-container">'
@@ -508,11 +509,11 @@ with tab_classifier:
     else:
         # File Uploader
         uploaded_file = st.file_uploader(
-            "Przeciągnij i upuść lub wybierz z dysku zdjęcie ptaka", 
+            "Przeciągnij i upuść lub wybierz z dysku zdjęcie ptaka",
             type=["jpg", "jpeg", "png"],
             help="Obsługiwane formaty: PNG, JPG, JPEG."
         )
-        
+
         if uploaded_file is not None:
             file_bytes = uploaded_file.getvalue()
             if st.session_state.active_image_bytes != file_bytes:
@@ -524,49 +525,49 @@ with tab_classifier:
         if st.session_state.active_image_bytes is not None:
             try:
                 image = Image.open(io.BytesIO(st.session_state.active_image_bytes))
-                
+
                 # Create two columns (left: image card, right: results card)
                 main_col1, main_col2 = st.columns([1, 1], gap="large")
-                
+
                 with main_col1:
                     st.markdown('<div class="premium-card">', unsafe_allow_html=True)
                     st.markdown("### 📷 Podgląd zdjęcia")
                     st.image(image, width="content")
                     st.markdown(f"**Nazwa pliku:** `{st.session_state.active_image_name}`")
                     st.markdown('</div>', unsafe_allow_html=True)
-                    
+
                 with main_col2:
                     st.markdown('<div class="premium-card">', unsafe_allow_html=True)
                     st.markdown("### 📊 Wyniki klasyfikacji")
-                    
+
                     # Convert image to bytes for API post
                     img_byte_arr = io.BytesIO()
                     image.save(img_byte_arr, format="JPEG")
                     img_byte_arr = img_byte_arr.getvalue()
-                    
+
                     files = {
                         "image": (
-                            st.session_state.active_image_name, 
-                            img_byte_arr, 
+                            st.session_state.active_image_name,
+                            img_byte_arr,
                             "image/jpeg"
                         )
                     }
-                    
+
                     with st.spinner("Analiza szczegółów upierzenia przez model AI..."):
                         try:
                             response = requests.post(f"{BACKEND_URL}/predict", files=files, timeout=30)
-                            
+
                             if response.status_code == 200:
                                 data = response.json()
                                 predictions = data.get("predictions", [])
-                                
+
                                 if predictions:
                                     # Render Top Match Winner Card
                                     top_pred = predictions[0]
                                     top_name_raw = top_pred["species"]
                                     top_name = format_species_name(top_name_raw)
                                     top_confidence = top_pred["confidence"]
-                                    
+
                                     st.markdown(
                                         f'<div class="winner-card">'
                                         f'<div class="winner-badge">Najbardziej dopasowany</div>'
@@ -575,15 +576,15 @@ with tab_classifier:
                                         f'</div>',
                                         unsafe_allow_html=True
                                     )
-                                    
+
                                     # Other candidates list
                                     st.markdown("#### Prawdopodobne gatunki:")
                                     for pred in predictions:
                                         name_fmt = format_species_name(pred["species"])
                                         render_progress_bar(name_fmt, pred["confidence"])
-                                        
+
                                     st.markdown("<br>", unsafe_allow_html=True)
-                                    
+
                                     # Wikipedia button
                                     wiki_url = f"https://pl.wikipedia.org/wiki/Special:Search?search={top_name}"
                                     st.link_button(
@@ -592,7 +593,7 @@ with tab_classifier:
                                         use_container_width=True,
                                         type="primary"
                                     )
-                                    
+
                                 else:
                                     st.warning("Serwer nie zwrócił żadnych predykcji.")
                             else:
@@ -604,9 +605,9 @@ with tab_classifier:
                             st.error("Przekroczono limit czasu połączenia. Backend nie odpowiedział w wyznaczonym czasie.")
                         except Exception as e:
                             st.error(f"Nie udało się wysłać zapytania: {str(e)}")
-                            
+
                     st.markdown('</div>', unsafe_allow_html=True)
-                    
+
             except Exception as e:
                 st.error(f"Nie udało się załadować obrazu: {str(e)}")
 
@@ -651,7 +652,7 @@ with tab_encyclopedia:
                     f'</div>'
                 )
                 html_cards.append(card_html)
-            
+
             # Draw grid
             st.markdown(f'<div class="encyclopedia-grid">{"".join(html_cards)}</div>', unsafe_allow_html=True)
         else:
@@ -659,7 +660,7 @@ with tab_encyclopedia:
     else:
         # Default view: Group by family
         st.subheader("📁 Kategorie ptaków w naszej bazie")
-        
+
         families = {}
         for key, pl_name in BIRD_NAMES_MAPPING.items():
             eng_name = key.split(".", 1)[-1].replace("_", " ")
@@ -670,13 +671,13 @@ with tab_encyclopedia:
 
         # Sort families alphabetically
         sorted_families = sorted(families.items())
-        
+
         # Split into columns for balanced layout
         cols = st.columns(2, gap="medium")
         for idx, (family, members) in enumerate(sorted_families):
             col_idx = idx % 2
             family_pl = FAMILY_TRANSLATIONS.get(family, f"{family}s")
-            
+
             with cols[col_idx]:
                 with st.expander(f"🪶 {family_pl} ({len(members)} gatunków)"):
                     for pl, eng in sorted(members):

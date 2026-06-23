@@ -63,7 +63,7 @@ def build_model(model_name: str, num_classes: int) -> nn.Module:
     return model
 
 
-def run_epoch(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+def run_epoch(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
     model: nn.Module,
     loader: DataLoader,
     criterion: nn.Module,
@@ -204,7 +204,9 @@ def main() -> None:  # pylint: disable=too-many-locals,too-many-statements
         logger.info("SKIP_TRAIN is set to true. Skipping training execution.")
         return
 
-    dataset_dir = os.getenv("DATASET_DIR", str(_PROJECT_ROOT / "dataset" / "CUB_200_2011" / "images"))
+    dataset_dir = os.getenv(
+        "DATASET_DIR", str(_PROJECT_ROOT / "dataset" / "CUB_200_2011" / "images")
+    )
     model_dir = os.getenv("MODEL_DIR", str(_PROJECT_ROOT / "models"))
     model_file = os.getenv("MODEL_FILE", "bird_classifier.pt")
     classes_file = os.getenv("CLASSES_FILE", "classes.json")
