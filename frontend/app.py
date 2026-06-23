@@ -1,4 +1,5 @@
 """Modern, premium Streamlit frontend for the OrnithoAI bird species classifier."""
+# pylint: disable=line-too-long, invalid-name
 
 import io
 import json
@@ -7,6 +8,7 @@ import os
 
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 from PIL import Image
 
 # Setup logging
@@ -23,6 +25,7 @@ st.set_page_config(
 
 # --- CUSTOM CSS INJECTION ---
 def inject_custom_css():
+    """Inject global CSS overrides and Google Font into the Streamlit page."""
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
@@ -310,9 +313,10 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 # Diagnostic check for backend connection
 @st.cache_data(ttl=5)
 def check_backend_health(url):
+    """Return True if the backend /health endpoint responds with HTTP 200."""
     try:
-        response = requests.get(f"{url}/health", timeout=3)
-        return response.status_code == 200
+        resp = requests.get(f"{url}/health", timeout=3)
+        return resp.status_code == 200
     except requests.exceptions.RequestException:
         return False
 
@@ -323,7 +327,7 @@ names_file = os.path.join(os.path.dirname(__file__), "bird_names_pl.json")
 try:
     with open(names_file, encoding="utf-8") as f:
         BIRD_NAMES_MAPPING = json.load(f)
-except Exception as e:
+except Exception as e:  # pylint: disable=broad-exception-caught
     logger.error("Failed to load bird names mapping: %s", str(e))
     BIRD_NAMES_MAPPING = {}
 
@@ -449,12 +453,22 @@ with tab_classifier:
         st.session_state.active_image_bytes = None
     if "active_image_name" not in st.session_state:
         st.session_state.active_image_name = None
+    if "scroll_to_results" not in st.session_state:
+        st.session_state.scroll_to_results = False
+    if "scroll_counter" not in st.session_state:
+        st.session_state.scroll_counter = 0
 
     st.write("### ⚡ Szybki test na przykładach")
     cols = st.columns(len(EXAMPLES))
     for idx, (name, info) in enumerate(EXAMPLES.items()):
         with cols[idx]:
-            st.image(info["url"], width="content", caption=info["description"])
+            st.markdown(
+                f'<div style="height:400px;overflow:hidden;border-radius:8px;margin-bottom:8px;">'
+                f'<img src="{info["url"]}" style="width:100%;height:100%;object-fit:cover;object-position:center top;" alt="{info["description"]}">'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+            st.caption(info["description"])
             if st.button(f"Wybierz: {name}", key=f"ex_btn_{idx}", use_container_width=True):
                 with st.spinner("Pobieranie zdjęcia przykładowego..."):
                     try:
@@ -462,25 +476,38 @@ with tab_classifier:
                         if res.status_code == 200:
                             st.session_state.active_image_bytes = res.content
                             st.session_state.active_image_name = info["filename"]
+                            st.session_state.scroll_to_results = True
                             st.rerun()
                         else:
                             st.error("Nie udało się pobrać zdjęcia przykładowego.")
-                    except Exception as e:
+                    except Exception as e:  # pylint: disable=broad-exception-caught
                         st.error(f"Błąd pobierania: {str(e)}")
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.write("---")
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Helper function to format species names nicely
-    def format_species_name(name: str) -> str:
-        # Handle folder name fallback like "119.House_Sparrow"
-        if "." in name:
-            name = name.split(".", 1)[-1]
-        return name.replace("_", " ").strip().capitalize()
+    # Helper function to format species names nicely (fallback: English)
+    def format_species_name(species: str) -> str:
+        """Strip numeric prefix and underscores, return capitalised English name."""
+        if "." in species:
+            species = species.split(".", 1)[-1]
+        return species.replace("_", " ").strip().capitalize()
+
+    # Return Polish name from mapping, falling back to formatted English
+    def get_display_name(species_raw: str) -> str:
+        """Return the Polish common name for a species, or a formatted English fallback."""
+        if species_raw in BIRD_NAMES_MAPPING:
+            return BIRD_NAMES_MAPPING[species_raw]
+        clean = species_raw.split(".", 1)[-1] if "." in species_raw else species_raw
+        for _k, _pl in BIRD_NAMES_MAPPING.items():
+            if _k.split(".", 1)[-1].lower() == clean.lower():
+                return _pl
+        return format_species_name(species_raw)
 
     # Helper to render custom colored progress bars
     def render_progress_bar(label: str, confidence: float):
+        """Render a colour-coded horizontal progress bar for a confidence score."""
         # Determine color scale
         if confidence >= 0.70:
             color = "linear-gradient(90deg, #10b981, #059669)" # Strong Green
@@ -521,6 +548,23 @@ with tab_classifier:
                 st.session_state.active_image_name = uploaded_file.name
                 st.rerun()
 
+        # Anchor for autoscroll + trigger scroll when flag is set
+        st.markdown('<div id="bird-result-anchor"></div>', unsafe_allow_html=True)
+        if st.session_state.get("scroll_to_results"):
+            st.session_state.scroll_to_results = False
+            st.session_state.scroll_counter += 1
+            _sc = st.session_state.scroll_counter
+            components.html(
+                f"""<script>
+                var _run = {_sc};
+                setTimeout(function() {{
+                    var anchor = window.parent.document.getElementById('bird-result-anchor');
+                    if (anchor) {{ anchor.scrollIntoView({{behavior: 'smooth', block: 'start'}}); }}
+                }}, 150);
+                </script>""",
+                height=1,
+            )
+
         # If we have an active image (uploaded or selected from example)
         if st.session_state.active_image_bytes is not None:
             try:
@@ -540,9 +584,10 @@ with tab_classifier:
                     st.markdown('<div class="premium-card">', unsafe_allow_html=True)
                     st.markdown("### 📊 Wyniki klasyfikacji")
 
-                    # Convert image to bytes for API post
+                    # Convert image to bytes for API post (JPEG requires RGB, no alpha)
+                    img_rgb = image.convert("RGB") if image.mode != "RGB" else image
                     img_byte_arr = io.BytesIO()
-                    image.save(img_byte_arr, format="JPEG")
+                    img_rgb.save(img_byte_arr, format="JPEG")
                     img_byte_arr = img_byte_arr.getvalue()
 
                     files = {
@@ -565,7 +610,7 @@ with tab_classifier:
                                     # Render Top Match Winner Card
                                     top_pred = predictions[0]
                                     top_name_raw = top_pred["species"]
-                                    top_name = format_species_name(top_name_raw)
+                                    top_name = get_display_name(top_name_raw)
                                     top_confidence = top_pred["confidence"]
 
                                     st.markdown(
@@ -580,7 +625,7 @@ with tab_classifier:
                                     # Other candidates list
                                     st.markdown("#### Prawdopodobne gatunki:")
                                     for pred in predictions:
-                                        name_fmt = format_species_name(pred["species"])
+                                        name_fmt = get_display_name(pred["species"])
                                         render_progress_bar(name_fmt, pred["confidence"])
 
                                     st.markdown("<br>", unsafe_allow_html=True)
@@ -603,12 +648,12 @@ with tab_classifier:
                                 )
                         except requests.exceptions.Timeout:
                             st.error("Przekroczono limit czasu połączenia. Backend nie odpowiedział w wyznaczonym czasie.")
-                        except Exception as e:
+                        except Exception as e:  # pylint: disable=broad-exception-caught
                             st.error(f"Nie udało się wysłać zapytania: {str(e)}")
 
                     st.markdown('</div>', unsafe_allow_html=True)
 
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 st.error(f"Nie udało się załadować obrazu: {str(e)}")
 
 with tab_encyclopedia:
