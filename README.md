@@ -1,6 +1,6 @@
 # OrnithoAI - Klasyfikator Gatunków Ptaków
 
-OrnithoAI to modułowa, konteneryzowana aplikacja uczenia maszynowego przeznaczona do klasyfikacji gatunków ptaków. Cały stos technologiczny wykorzystuje **FastAPI** do obsługi wysokowydajnych interfejsów REST API, **Streamlit** do prezentacji czystego i przyjaznego dla użytkownika interfejsu (frontend), **PyTorch** oraz **timm** do serwowania modeli AI, a także **Docker Compose** do pełnej orkiestracji usług.
+OrnithoAI to modułowa, konteneryzowana aplikacja uczenia maszynowego przeznaczona do klasyfikacji gatunków ptaków. Cały stos technologiczny wykorzystuje **FastAPI** do obsługi wysokowydajnych interfejsów REST API, **Streamlit** do prezentacji czystego i przyjaznego dla użytkownika interfejsu (frontend), **PyTorch** do serwowania modeli AI, a także **Docker Compose** do pełnej orkiestracji usług.
 
 ---
 
@@ -10,7 +10,7 @@ OrnithoAI to modułowa, konteneryzowana aplikacja uczenia maszynowego przeznaczo
 2. **Dynamiczny, Nieblokujący Start Backends**: Podczas uruchamiania backend w bezpieczny sposób odpytuje o współdzielone pliki modelu z wykorzystaniem standardowego modułu `logging`. Jeśli wagi nie zostaną odnalezione w ciągu **5 minut (300 s)**, sekwencja startowa przerywa działanie, zapobiegając zakleszczeniom (deadlockom).
 3. **Nieblokująca Pętla Wnioskowania**: Zadania przetwarzania obrazu i propagacji w przód w PyTorch są delegowane do osobnych wątków roboczych za pomocą `asyncio.to_thread`. Zapobiega to blokowaniu głównej pętli zdarzeń FastAPI, która może bez przeszkód przetwarzać kolejne żądania współbieżne.
 4. **Automatyczne Przełączanie na CUDA**: Usługa wnioskowania automatycznie wykrywa obecność procesorów graficznych kompatybilnych z CUDA (`cuda`). Obliczenia są automatycznie kierowane na kartę GPU, a w przypadku jej braku system przezroczyście przełącza się na pracę na procesorze (CPU).
-5. **Niezależna Architektura**: Konfiguracje modelu, katalogi, pliki wag oraz adresy URL usług API są w pełni sparametryzowane poprzez standardowy plik zmiennych środowiskowych `.env`. Pozwala to na łatwą zmianę architektury modelu (np. z `resnet50` na `efficientnet_b0`) bez modyfikowania kodu rutingu API czy interfejsu.
+5. **Niezależna Architektura**: Konfiguracje modelu, katalogi, pliki wag oraz adresy URL usług API są w pełni sparametryzowane poprzez standardowy plik zmiennych środowiskowych `.env`. Pozwala to na łatwą zmianę architektury modelu (np. z `resnet50` na `resnet18`) bez modyfikowania kodu rutingu API czy interfejsu.
 6. **Docker Healthchecks**: W pliku `docker-compose.yml` zaimplementowano standardowe mechanizmy sprawdzania stanu kontenerów, dzięki czemu aplikacja Streamlit (frontend) uruchamia się dopiero wtedy, gdy FastAPI backend zgłosi status `healthy`.
 
 ---
@@ -18,41 +18,98 @@ OrnithoAI to modułowa, konteneryzowana aplikacja uczenia maszynowego przeznaczo
 ## 📂 Struktura Katalogów Projektu
 
 ```
+├── data/                          # Przygotowanie i transformacja danych
+│   ├── __init__.py
+│   ├── dataset.py                 # BirdDataset, augmentacje TRAIN/VAL, random_split
+│   ├── bird_names_pl.json         # Mapowanie angielskich nazw klas na polskie dla 200 klas
+│   └── raw/                       # Miejsce na surowe obrazy CUB-200-2011
+│
 ├── backend/
-│   ├── app/
+│   ├── app/                       # REST API (FastAPI)
 │   │   ├── __init__.py
-│   │   ├── main.py            # Punkt wejścia FastAPI (oczekuje na plik modelu z 5-minutowym timeoutem)
-│   │   ├── config.py          # Ładowanie ustawień przy użyciu Pydantic Settings
-│   │   ├── schemas.py         # Schematy Pydantic dla struktur wejściowych/wyjściowych API
+│   │   ├── main.py                # Punkt wejścia FastAPI
+│   │   ├── config.py              # Ładowanie ustawień przy użyciu Pydantic Settings
+│   │   ├── schemas.py             # Schematy Pydantic dla struktur wejściowych/wyjściowych API
 │   │   ├── routes/
 │   │   │   ├── __init__.py
-│   │   │   ├── health.py      # GET /health
-│   │   │   └── predict.py     # POST /predict (wykorzystuje asyncio.to_thread do nieblokujących predykcji)
+│   │   │   ├── health.py          # GET /health
+│   │   │   └── predict.py         # POST /predict (asyncio.to_thread — nieblokujące)
 │   │   └── services/
 │   │       ├── __init__.py
-│   │       └── inference.py   # Usługa wnioskowania z wykrywaniem CUDA/CPU i bezpieczeństwem wątkowym
-│   ├── data/                          # [WARSTWA DANYCH] Przygotowanie i transformacje
-│       ├── __init__.py
-│       ├── dataset.py                 # BirdDataset, augmentacje TRAIN/VAL, random_split
-│       ├── bird_names_pl.json         # Mapowanie angielskich nazw klas → polskich (200 klas)
-│       └── raw/                       # Miejsce na surowe obrazy CUB-200-2011
-│   ├── train/
+│   │       └── inference.py       # Wnioskowanie z wykrywaniem CUDA/CPU, bezpieczeństwo wątkowe
+│   ├── train/                     # Trenowanie i fine-tuning
 │   │   ├── __init__.py
-│   │   └── train.py           # Dwufazowy fine-tuning: zamrożony szkielet -> pełna sieć (ResNet + AdamW + AMP)
-│   ├── .dockerignore          # Wykluczenia pamięci pokrycia, środowisk wirtualnych i wag
-│   ├── Dockerfile             # Dockerfile dla środowiska Python 3.13 (FastAPI na porcie 8000)
-│   └── requirements.txt       # fastapi, uvicorn, torch, torchvision, timm, pillow
-├── frontend/
-│   ├── app.py                 # Interfejs Streamlit z podglądem obrazu i wykresami top-5
-│   ├── .dockerignore          # Wykluczenia pamięci podręcznej
-│   ├── Dockerfile             # Dockerfile dla środowiska Python 3.13 (Streamlit na porcie 8501)
-│   └── requirements.txt       # streamlit, requests, pillow
-├── docker-compose.yml         # Definiuje usługi backendu, frontendu, trenera, healthchecki i wolumeny
-├── pyproject.toml             # Konfiguracja narzędzia Ruff (linter i formatter) oraz Pylint
-├── run.sh                     # Lokalny skrypt uruchomieniowy dla systemów Linux/macOS
-├── .env.example               # Szablon zmiennych środowiskowych – należy skopiować jako .env przed uruchomieniem
-└── README.md                  # Ten plik
+│   │   └── train.py               # Dwufazowy fine-tuning: głowica a potem pełny backbone (ResNet + AdamW + AMP)
+│   ├── .dockerignore
+│   ├── Dockerfile                 # Python 3.13, FastAPI na porcie 8000
+│   ├── Dockerfile.trainer         # Kontener jednorazowy do trenowania modelu
+│   └── requirements.txt           # fastapi, uvicorn, torch, torchvision, pillow
+│
+├── frontend/                      #  Interfejs użytkownika (Streamlit)
+│   ├── app.py                     # UI z podglądem obrazu, wykresami top-5 i encyklopedią gatunków
+│   ├── .dockerignore
+│   ├── Dockerfile                 # Python 3.13, Streamlit na porcie 8501
+│   └── requirements.txt           # streamlit, requests, pillow
+│
+├── docs/images/                   # Zrzuty ekranu do dokumentacji
+├── models/                        # Wagi modelu (generowane przez trainer, nieśledzone przez git)
+├── docker-compose.yml             # Orkiestracja: trainer → backend (healthcheck) → frontend
+├── pyproject.toml                 # Konfiguracja Ruff (linter/formatter) i Pylint
+├── run.sh                         # Lokalny skrypt uruchomieniowy Linux/macOS
+├── .env.example                   # Szablon zmiennych środowiskowych — kopiuj jako .env
+└── README.md                      # Ten plik
 ```
+---
+
+## ⚙️ Konfiguracja Środowiska (zmienne .env)
+
+Przed pierwszym uruchomieniem skopiuj szablon:
+```bash
+cp .env.example .env
+```
+
+Plik `.env` kontroluje pełne zachowanie aplikacji bez modyfikowania kodu:
+
+| Zmienna | Domyślna wartość | Opis |
+|---------|-----------------|------|
+| `MODEL_DIR` | `/models` | Katalog przechowywania wag i pliku klas |
+| `MODEL_FILE` | `bird_classifier.pt` | Nazwa pliku wag modelu PyTorch |
+| `CLASSES_FILE` | `classes.json` | Plik JSON z nazwami 200 klas |
+| `MODEL_NAME` | `resnet50` | Architektura modelu (`resnet50` lub `resnet18`) |
+| `BATCH_SIZE` | `64` | Rozmiar batcha treningowego |
+| `PHASE1_EPOCHS` | `5` | Liczba epok fazy 1 (tylko głowica) |
+| `PHASE2_EPOCHS` | `20` | Liczba epok fazy 2 (pełny fine-tuning) |
+| `PHASE1_LR` | `1e-3` | Learning rate fazy 1 |
+| `PHASE2_LR` | `1e-4` | Learning rate fazy 2 |
+| `BACKEND_URL` | `http://localhost:8000` | Adres backendu używany przez frontend Streamlit |
+| `SKIP_TRAIN` | `true` | Pomiń trenowanie przy starcie (gdy wagi już istnieją) |
+
+---
+
+## 🤖 Model ML — Szczegóły
+
+### Architektura
+
+Model bazuje na pretrenowanej sieci **ResNet-50** (wagi ImageNet) dostrojonej dwufazowo na zbiorze **CUB-200-2011** (200 gatunków ptaków, 11 788 obrazów):
+
+- **Faza 1 — trening głowicy** (5 epok, lr=1e-3): zamrożony backbone, trenowana jedynie nowa warstwa `nn.Linear(2048 → 200)`.
+- **Faza 2 — pełny fine-tuning** (20 epok, lr=1e-4): odblokowanie wszystkich parametrów, scheduler `CosineAnnealingLR`, optymalizator `AdamW` z `weight_decay=1e-4`, `CrossEntropyLoss` z label smoothing=0.1.
+
+### Augmentacje danych (warstwa `data/dataset.py`)
+
+Zbiór treningowy stosuje augmentacje zapobiegające przeuczeniu: losowe przycięcie (`RandomResizedCrop`), odbicia poziome, rotacja ±20°, zmiana jasności/kontrastu/nasycenia, losowe wymazywanie (`RandomErasing`).
+
+### Wyniki trenowania
+
+Trenowanie przeprowadzono na GPU (CUDA), czas: ~14 minut. Pełny raport per-epoka generowany jest automatycznie do pliku `models/training_report.md`.
+
+| Metryka | Wartość |
+|---------|---------|
+| Dokładność walidacyjna (Top-1) | **84,09%** |
+| Liczba klas | 200 gatunków |
+| Zbiór treningowy | 9 431 próbek |
+| Zbiór walidacyjny | 2 357 próbek |
+| Najlepsza epoka | 25 (faza 2, epoka 20) |
 
 ---
 
@@ -65,9 +122,9 @@ Projekt opiera się na zbiorze danych **CUB-200-2011** (Caltech-UCSD Birds) zawi
    wget https://data.caltech.edu/records/65de6-vp158/files/CUB_200_2011.tgz
    tar -xzf CUB_200_2011.tgz -C data/raw/
    ```
-2. Oczekiwana struktura folderów to `data/raw/CUB_200_2011/images/<folder_klasy>/*.jpg`.
+2. Oczekiwana struktura folderów: ` data/raw/CUB_200_2011/images/<folder_klasy>/*.jpg`
 
-> **Uwaga:** Zbiór danych ani wagi wytrenowanego modelu nie są przechowywane w repozytorium ze względu na ich duży rozmiar. Przed uruchomieniem backendu należy uruchomić moduł treningowy w celu wygenerowania pliku `models/bird_classifier.pt`.
+> **Uwaga:** Zbiór danych ani wagi wytrenowanego modelu nie są przechowywane w repozytorium ze względu na ich duży rozmiar. Przed uruchomieniem backendu należy uruchomić moduł treningowy w celu wygenerowania pliku `models/bird_classifier.pt` (lub ustawić `SKIP_TRAIN=false` w `.env`).
 
 ---
 
@@ -98,7 +155,6 @@ docker compose down
 ```
 
 **Całkowite usunięcie plików wag modelu:**
-Usuń katalog `./models/` z poziomu komputera hosta:
 ```bash
 rm -rf models/
 ```
@@ -113,7 +169,6 @@ Utwórz i aktywuj wirtualne środowisko, a następnie zainstaluj niezbędne zale
 ```bash
 python3.13 -m venv .venv_suml
 source .venv_suml/bin/activate          # Systemy Linux/macOS
-# .venv_suml\Scripts\Activate.ps1      # System Windows (PowerShell)
 
 pip install -r backend/requirements.txt -r frontend/requirements.txt
 ```
@@ -136,7 +191,7 @@ Skrypt automatycznie uruchomi proces uczenia, poczeka na gotowość serwera API 
 ## 🌐 Adresy Usług
 
 | Usługa | Adres URL |
-|---------|-----|
+|---------|-----------|
 | Streamlit Frontend | http://localhost:8501 |
 | FastAPI Swagger UI (Dokumentacja API) | http://localhost:8000/docs |
 | Sprawdzenie Stanu Backend (Health Check) | http://localhost:8000/health |
@@ -180,22 +235,19 @@ Po przesłaniu pliku następuje przetworzenie obrazu (zmiana rozmiaru do formatu
        {
          "species": "011.Rusty_Blackbird",
          "confidence": 0.0215
-       },
-       ...
+       }
      ]
    }
    ```
 2. **Prezentacja na interfejsie użytkownika:**
-   * **Karta Głównego Dopasowania (Najbardziej dopasowany):** Prezentuje nazwę gatunku o najwyższym współczynniku pewności przetłumaczoną na język polski (przy pomocy pliku mapowania `bird_names_pl.json`) oraz jego oryginalną nazwę angielską (np. "Kacyk rdzawy" dla "Rusty Blackbird") wraz z procentowym wskaźnikiem pewności.
-   * **Wykresy Prawdopodobieństwa (Top-5):** Lista 5 najbardziej prawdopodobnych gatunków zobrazowana kolorowymi paskami postępu (Zielony dla pewności >= 70%, Pomarańczowy dla pewności od 35% do 69%, Szary dla pewności poniżej 35%).
+   * **Karta Głównego Dopasowania:** Prezentuje nazwę gatunku o najwyższym współczynniku pewności przetłumaczoną na język polski (przy pomocy pliku `data/bird_names_pl.json`) oraz oryginalną nazwę angielską wraz z procentowym wskaźnikiem pewności.
+   * **Wykresy Prawdopodobieństwa (Top-5):** Lista 5 najbardziej prawdopodobnych gatunków zobrazowana kolorowymi paskami postępu (Zielony ≥ 70%, Pomarańczowy 35–69%, Szary < 35%).
    * **Integracja z Wikipedią:** Przycisk "Dowiedz się więcej" automatycznie przekierowuje użytkownika do artykułu na angielskiej Wikipedii dedykowanego wybranemu gatunkowi.
-   * **Baza Gatunków (Encyklopedia):** Osobna zakładka interfejsu umożliwia przeglądanie pełnego spisu 200 obsługiwanych klas ptaków podzielonych na rodziny (np. Albatrosy, Mewy, Zimorodki), wyszukiwanie ich po nazwach polskich i angielskich oraz bezpośrednie przechodzenie do ich zdjęć w Google Grafika lub opisów w Wikipedii.
+   * **Baza Gatunków (Encyklopedia):** Osobna zakładka interfejsu umożliwia przeglądanie pełnego spisu 200 obsługiwanych klas ptaków podzielonych na rodziny, wyszukiwanie po nazwach polskich i angielskich oraz przejście do Google Grafika lub Wikipedii.
 
 ---
 
 ## 📸 Jak Używać Aplikacji — Instrukcja Krok po Kroku
-
-Poniżej znajduje się krótka instrukcja wizualna przedstawiająca obsługę interfejsu graficznego aplikacji:
 
 ### Krok 1: Uruchomienie i Panel Główny
 Po poprawnym uruchomieniu kontenerów lub skryptów lokalnych otwórz przeglądarkę pod adresem [http://localhost:8501](http://localhost:8501). Zobaczysz główny panel aplikacji z informacjami o projekcie po lewej stronie oraz trzema krokami instrukcji na środku.

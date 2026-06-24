@@ -9,6 +9,14 @@ PYTHON="$VENV/bin/python"
 UVICORN="$VENV/bin/uvicorn"
 STREAMLIT="$VENV/bin/streamlit"
 
+# Load .env if present so SKIP_TRAIN and other variables are available
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    set -a
+    # shellcheck source=/dev/null
+    source "$SCRIPT_DIR/.env"
+    set +a
+fi
+
 cleanup() {
     echo ""
     echo "Stopping services..."
@@ -20,6 +28,17 @@ cleanup() {
 trap cleanup INT TERM
 
 mkdir -p "$MODELS_DIR"
+
+# --- TRAINER ---
+SKIP_TRAIN="${SKIP_TRAIN:-false}"
+if [ "$SKIP_TRAIN" != "true" ]; then
+    echo ">>> Running trainer..."
+    MODEL_DIR="$MODELS_DIR" PYTHONPATH="$SCRIPT_DIR" \
+        "$PYTHON" "$SCRIPT_DIR/backend/train/train.py"
+    echo ">>> Training complete."
+else
+    echo ">>> SKIP_TRAIN=true — skipping training."
+fi
 
 # --- BACKEND ---
 echo ">>> Starting backend..."
