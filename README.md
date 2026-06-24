@@ -124,7 +124,7 @@ cp .env.example .env
 ```
 
 
-Oba skrypty automatycznie uruchomią proces uczenia, poczekają na gotowość serwera API (backend), a na końcu włączą interfejs Streamlit (frontend).
+Skrypt automatycznie uruchomi proces uczenia, poczeka na gotowość serwera API (backend), a na końcu włączy interfejs Streamlit (frontend).
 
 ---
 
