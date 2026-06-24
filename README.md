@@ -45,7 +45,6 @@ OrnithoAI to modułowa, konteneryzowana aplikacja uczenia maszynowego przeznaczo
 ├── docker-compose.yml         # Definiuje usługi backendu, frontendu, trenera, healthchecki i wolumeny
 ├── pyproject.toml             # Konfiguracja narzędzia Ruff (linter i formatter) oraz Pylint
 ├── run.sh                     # Lokalny skrypt uruchomieniowy dla systemów Linux/macOS
-├── run_dla_windowsiakow.ps1   # Lokalny skrypt uruchomieniowy dla systemu Windows (PowerShell)
 ├── .env.example               # Szablon zmiennych środowiskowych – należy skopiować jako .env przed uruchomieniem
 └── README.md                  # Ten plik
 ```
@@ -124,10 +123,6 @@ cp .env.example .env
 ./run.sh
 ```
 
-**Uruchomienie dla systemu Windows (PowerShell):**
-```powershell
-powershell -ExecutionPolicy Bypass -File run_dla_windowsiakow.ps1
-```
 
 Oba skrypty automatycznie uruchomią proces uczenia, poczekają na gotowość serwera API (backend), a na końcu włączą interfejs Streamlit (frontend).
 
