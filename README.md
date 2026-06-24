@@ -31,6 +31,11 @@ OrnithoAI to modułowa, konteneryzowana aplikacja uczenia maszynowego przeznaczo
 │   │   └── services/
 │   │       ├── __init__.py
 │   │       └── inference.py   # Usługa wnioskowania z wykrywaniem CUDA/CPU i bezpieczeństwem wątkowym
+│   ├── data/                          # [WARSTWA DANYCH] Przygotowanie i transformacje
+│       ├── __init__.py
+│       ├── dataset.py                 # BirdDataset, augmentacje TRAIN/VAL, random_split
+│       ├── bird_names_pl.json         # Mapowanie angielskich nazw klas → polskich (200 klas)
+│       └── raw/                       # Miejsce na surowe obrazy CUB-200-2011
 │   ├── train/
 │   │   ├── __init__.py
 │   │   └── train.py           # Dwufazowy fine-tuning: zamrożony szkielet -> pełna sieć (ResNet + AdamW + AMP)
