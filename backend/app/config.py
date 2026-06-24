@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Katalog projektu: backend/app/config.py -> backend/app -> backend -> project root
+# Project catalog: backend/app/config.py -> backend/app -> backend -> project root
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 

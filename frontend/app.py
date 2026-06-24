@@ -20,13 +20,15 @@ st.set_page_config(
     page_title="OrnithoAI - Klasyfikator Ptaków",
     page_icon="🐦",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
+
 
 # --- CUSTOM CSS INJECTION ---
 def inject_custom_css():
     """Inject global CSS overrides and Google Font into the Streamlit page."""
-    st.markdown("""
+    st.markdown(
+        """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
@@ -302,13 +304,17 @@ def inject_custom_css():
         text-decoration: underline;
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
+
 
 # Run CSS Injection
 inject_custom_css()
 
 # --- BACKEND CONNECTION SETUP ---
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+
 
 # Diagnostic check for backend connection
 @st.cache_data(ttl=5)
@@ -319,6 +325,7 @@ def check_backend_health(url):
         return resp.status_code == 200
     except requests.exceptions.RequestException:
         return False
+
 
 backend_healthy = check_backend_health(BACKEND_URL)
 
@@ -358,13 +365,19 @@ FAMILY_TRANSLATIONS = {
     "Vireo": "Wireonki (Vireos)",
     "Warbler": "Lasówki (Warblers)",
     "Woodpecker": "Dzięciołowate (Woodpeckers)",
-    "Wren": "Strzyżyki (Wrens)"
+    "Wren": "Strzyżyki (Wrens)",
 }
 
-# --- PANEL BOCZNY (SIDEBAR) ---
+# SIDEBAR
 with st.sidebar:
-    st.image("https://images.unsplash.com/photo-1452570053594-1b985d6ea890?w=300&auto=format&fit=crop&q=80", width="content")
-    st.markdown('<div class="header-title" style="font-size: 1.8rem; text-align: left;">OrnithoAI</div>', unsafe_allow_html=True)
+    st.image(
+        "https://images.unsplash.com/photo-1452570053594-1b985d6ea890?w=300&auto=format&fit=crop&q=80",
+        width="content",
+    )
+    st.markdown(
+        '<div class="header-title" style="font-size: 1.8rem; text-align: left;">OrnithoAI</div>',
+        unsafe_allow_html=True,
+    )
     st.caption("Inteligentny asystent rozpoznawania ptaków")
 
     st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
@@ -374,16 +387,16 @@ with st.sidebar:
         "na zbiorze **CUB-200-2011** w celu klasyfikacji gatunków ptaków "
         "na podstawie zdjęć."
     )
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### 🛠️ Zespół projektowy (SUML)")
     st.markdown("- **Michał Pavlovs** (s26701)")
     st.markdown("- **Kacper Kowieski** (s27794)")
     st.markdown("- **Michał Wereszczyński** (s27570)")
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Status połączenia
+    # Connection status indicator
     if backend_healthy:
         st.success("🟢 Połączono z API")
     else:
@@ -395,12 +408,16 @@ with st.sidebar:
         st.session_state.active_image_name = None
         st.rerun()
 
-# --- GŁÓWNY NAGŁÓWEK ---
+# Main title
 st.markdown('<div class="header-title">🐦 OrnithoAI</div>', unsafe_allow_html=True)
-st.markdown('<div class="header-subtitle">Przeanalizuj sylwetkę i upierzenie ptaka przy użyciu Deep Learning</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="header-subtitle">Przeanalizuj sylwetkę i upierzenie ptaka przy użyciu Deep Learning</div>',
+    unsafe_allow_html=True,
+)
 
-# --- SEKCJA INSTRUKTAŻOWA (STEP CARDS) ---
-st.markdown("""
+# Tutorial steps
+st.markdown(
+    """
 <div class="step-grid">
     <div class="step-box">
         <div class="step-icon">📸</div>
@@ -418,34 +435,36 @@ st.markdown("""
         <div class="step-desc">Zobacz 5 najbardziej pasujących gatunków i dowiedz się o nich więcej w Wikipedii.</div>
     </div>
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-# --- TABS LAYOUT ---
+# Tabs layout
 tab_classifier, tab_encyclopedia = st.tabs(["🔍 Klasyfikator AI", "📚 Baza gatunków (200 klas)"])
 
 with tab_classifier:
-    # --- ZDJĘCIA PRZYKŁADOWE (EXAMPLES) ---
+    # Examples
     EXAMPLES = {
         "Miauczyk szary": {
             "url": "https://images.unsplash.com/photo-1734630155396-2c476389a948?w=600&auto=format&fit=crop&q=80",
             "description": "Miauczyk szary",
-            "filename": "miauczyk.jpg"
+            "filename": "miauczyk.jpg",
         },
         "Europejski rudzik": {
             "url": "https://images.unsplash.com/photo-1591608971362-f08b2a75731a?q=80&w=880&auto=format&fit=crop&q=80",
             "description": "Drobny ptak z czerwoną piersią",
-            "filename": "rudzik.jpg"
+            "filename": "rudzik.jpg",
         },
         "Ziębnik purpurowy": {
             "url": "https://images.unsplash.com/photo-1663204166873-3ecd09eb3d91?w=600&auto=format&fit=crop&q=80",
             "description": "Ziębnik purpurowy",
-            "filename": "finch.jpg"
+            "filename": "finch.jpg",
         },
         "Kruk zwyczajny": {
             "url": "https://images.unsplash.com/photo-1682467612877-f9b5e55ff2af?q=80&w=764&auto=format&fit&q=80",
             "description": "Kruk zwyczajny",
-            "filename": "kruk.jpg"
-        }
+            "filename": "kruk.jpg",
+        },
     }
 
     # Session state initialization
@@ -465,8 +484,8 @@ with tab_classifier:
             st.markdown(
                 f'<div style="height:400px;overflow:hidden;border-radius:8px;margin-bottom:8px;">'
                 f'<img src="{info["url"]}" style="width:100%;height:100%;object-fit:cover;object-position:center top;" alt="{info["description"]}">'
-                f'</div>',
-                unsafe_allow_html=True
+                f"</div>",
+                unsafe_allow_html=True,
             )
             st.caption(info["description"])
             if st.button(f"Wybierz: {name}", key=f"ex_btn_{idx}", use_container_width=True):
@@ -510,11 +529,11 @@ with tab_classifier:
         """Render a colour-coded horizontal progress bar for a confidence score."""
         # Determine color scale
         if confidence >= 0.70:
-            color = "linear-gradient(90deg, #10b981, #059669)" # Strong Green
+            color = "linear-gradient(90deg, #10b981, #059669)"  # Strong Green
         elif confidence >= 0.35:
-            color = "linear-gradient(90deg, #f59e0b, #d97706)" # Amber Orange
+            color = "linear-gradient(90deg, #f59e0b, #d97706)"  # Amber Orange
         else:
-            color = "linear-gradient(90deg, #6b7280, #4b5563)" # Soft Grey
+            color = "linear-gradient(90deg, #6b7280, #4b5563)"  # Soft Grey
 
         percentage = confidence * 100
         st.markdown(
@@ -522,12 +541,12 @@ with tab_classifier:
             f'<div class="custom-bar-labels"><span>{label}</span><span>{percentage:.1f}%</span></div>'
             f'<div class="custom-bar-outer">'
             f'<div class="custom-bar-inner" style="width: {percentage}%; background: {color};"></div>'
-            f'</div>'
-            f'</div>',
-            unsafe_allow_html=True
+            f"</div>"
+            f"</div>",
+            unsafe_allow_html=True,
         )
 
-    # --- SEKCJA GŁÓWNA (WGRYWANIE / ANALIZA) ---
+    # Main section (UPLOAD / ANALYSIS)
     if not backend_healthy:
         st.error(
             "⚠️ Błąd połączenia: Nie można nawiązać komunikacji z serwerem backendowym API.\n\n"
@@ -538,7 +557,7 @@ with tab_classifier:
         uploaded_file = st.file_uploader(
             "Przeciągnij i upuść lub wybierz z dysku zdjęcie ptaka",
             type=["jpg", "jpeg", "png"],
-            help="Obsługiwane formaty: PNG, JPG, JPEG."
+            help="Obsługiwane formaty: PNG, JPG, JPEG.",
         )
 
         if uploaded_file is not None:
@@ -578,7 +597,7 @@ with tab_classifier:
                     st.markdown("### 📷 Podgląd zdjęcia")
                     st.image(image, width="content")
                     st.markdown(f"**Nazwa pliku:** `{st.session_state.active_image_name}`")
-                    st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
 
                 with main_col2:
                     st.markdown('<div class="premium-card">', unsafe_allow_html=True)
@@ -591,16 +610,14 @@ with tab_classifier:
                     img_byte_arr = img_byte_arr.getvalue()
 
                     files = {
-                        "image": (
-                            st.session_state.active_image_name,
-                            img_byte_arr,
-                            "image/jpeg"
-                        )
+                        "image": (st.session_state.active_image_name, img_byte_arr, "image/jpeg")
                     }
 
                     with st.spinner("Analiza szczegółów upierzenia przez model AI..."):
                         try:
-                            response = requests.post(f"{BACKEND_URL}/predict", files=files, timeout=30)
+                            response = requests.post(
+                                f"{BACKEND_URL}/predict", files=files, timeout=30
+                            )
 
                             if response.status_code == 200:
                                 data = response.json()
@@ -610,33 +627,41 @@ with tab_classifier:
                                     # Render Top Match Winner Card
                                     top_pred = predictions[0]
                                     top_name_raw = top_pred["species"]
-                                    top_name = get_display_name(top_name_raw)
+
+                                    top_name_pl = get_display_name(top_name_raw)
+                                    top_name_en = top_name_raw.split(".", 1)[-1].replace("_", " ")
+
                                     top_confidence = top_pred["confidence"]
 
                                     st.markdown(
                                         f'<div class="winner-card">'
                                         f'<div class="winner-badge">Najbardziej dopasowany</div>'
-                                        f'<div class="winner-name">{top_name}</div>'
+                                        f'<div class="winner-name">{top_name_pl}</div>'
+                                        f'<div style="font-size: 1.2rem; color: #9ca3af; margin-bottom: 15px; font-style: italic;">{top_name_en}</div>'
                                         f'<div class="winner-conf">{top_confidence * 100:.1f}% pewności</div>'
-                                        f'</div>',
-                                        unsafe_allow_html=True
+                                        f"</div>",
+                                        unsafe_allow_html=True,
                                     )
 
-                                    # Other candidates list
+                                    # Other candidates list (Dual Language)
                                     st.markdown("#### Prawdopodobne gatunki:")
                                     for pred in predictions:
-                                        name_fmt = get_display_name(pred["species"])
-                                        render_progress_bar(name_fmt, pred["confidence"])
+                                        pred_raw = pred["species"]
+                                        pred_pl = get_display_name(pred_raw)
+                                        pred_en = pred_raw.split(".", 1)[-1].replace("_", " ")
+
+                                        display_text = f"{pred_pl} • {pred_en}"
+                                        render_progress_bar(display_text, pred["confidence"])
 
                                     st.markdown("<br>", unsafe_allow_html=True)
 
-                                    # Wikipedia button
-                                    wiki_url = f"https://pl.wikipedia.org/wiki/Special:Search?search={top_name}"
+                                    # Wikipedia button (Strictly using English name)
+                                    wiki_url = f"https://en.wikipedia.org/wiki/Special:Search?search={top_name_en}"
                                     st.link_button(
-                                        f"📖 Dowiedz się więcej o: {top_name} (Wikipedia)",
+                                        f"📖 Dowiedz się więcej: {top_name_en} (Wikipedia EN)",
                                         wiki_url,
                                         use_container_width=True,
-                                        type="primary"
+                                        type="primary",
                                     )
 
                                 else:
@@ -647,11 +672,13 @@ with tab_classifier:
                                     f"{response.text}"
                                 )
                         except requests.exceptions.Timeout:
-                            st.error("Przekroczono limit czasu połączenia. Backend nie odpowiedział w wyznaczonym czasie.")
+                            st.error(
+                                "Przekroczono limit czasu połączenia. Backend nie odpowiedział w wyznaczonym czasie."
+                            )
                         except Exception as e:  # pylint: disable=broad-exception-caught
                             st.error(f"Nie udało się wysłać zapytania: {str(e)}")
 
-                    st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
 
             except Exception as e:  # pylint: disable=broad-exception-caught
                 st.error(f"Nie udało się załadować obrazu: {str(e)}")
@@ -663,7 +690,7 @@ with tab_encyclopedia:
         "Nasz model potrafi zidentyfikować **200 różnych klas ptaków**. Poniżej możesz wyszukiwać "
         "gatunki po nazwie polskiej lub angielskiej, przejść do artykułów na Wikipedii oraz obejrzeć galerie zdjęć."
     )
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # Search bar
     search_query = st.text_input("🔍 Wyszukaj ptaka po nazwie polskiej lub angielskiej", "")
@@ -672,7 +699,11 @@ with tab_encyclopedia:
     filtered_birds = []
     for key, pl_name in BIRD_NAMES_MAPPING.items():
         eng_name = key.split(".", 1)[-1].replace("_", " ")
-        if not search_query or search_query.lower() in pl_name.lower() or search_query.lower() in eng_name.lower():
+        if (
+            not search_query
+            or search_query.lower() in pl_name.lower()
+            or search_query.lower() in eng_name.lower()
+        ):
             filtered_birds.append((pl_name, eng_name))
 
     # Show search results
@@ -682,24 +713,31 @@ with tab_encyclopedia:
             # HTML card display
             html_cards = []
             for pl, eng in filtered_birds:
-                wiki_link = f"https://pl.wikipedia.org/wiki/Special:Search?search={pl}"
-                google_link = f"https://www.google.com/search?tbm=isch&q={pl}"
+                pl_url = pl.replace(" ", "+")
+                eng_url = eng.replace(" ", "+")
+
+                wiki_link = f"https://en.wikipedia.org/wiki/Special:Search?search={eng_url}"
+                google_link = f"https://www.google.com/search?tbm=isch&q={pl_url}"
+
                 card_html = (
                     f'<div class="encyclopedia-card">'
-                    f'<div>'
+                    f"<div>"
                     f'<div class="encyclopedia-card-title">{pl}</div>'
                     f'<div class="encyclopedia-card-sub">{eng}</div>'
-                    f'</div>'
+                    f"</div>"
                     f'<div class="encyclopedia-card-actions">'
-                    f'<a href="{wiki_link}" target="_blank">📖 Wikipedia</a>'
+                    f'<a href="{wiki_link}" target="_blank">📖 Wikipedia (EN)</a>'
                     f'<a href="{google_link}" target="_blank">📷 Google Grafika</a>'
-                    f'</div>'
-                    f'</div>'
+                    f"</div>"
+                    f"</div>"
                 )
                 html_cards.append(card_html)
 
             # Draw grid
-            st.markdown(f'<div class="encyclopedia-grid">{"".join(html_cards)}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="encyclopedia-grid">{"".join(html_cards)}</div>',
+                unsafe_allow_html=True,
+            )
         else:
             st.info("Brak gatunków odpowiadających Twojemu wyszukiwaniu.")
     else:
@@ -726,14 +764,18 @@ with tab_encyclopedia:
             with cols[col_idx]:
                 with st.expander(f"🪶 {family_pl} ({len(members)} gatunków)"):
                     for pl, eng in sorted(members):
-                        wiki_link = f"https://pl.wikipedia.org/wiki/Special:Search?search={pl}"
-                        google_link = f"https://www.google.com/search?tbm=isch&q={pl}"
+                        pl_url = pl.replace(" ", "+")
+                        eng_url = eng.replace(" ", "+")
+
+                        wiki_link = f"https://en.wikipedia.org/wiki/Special:Search?search={eng_url}"
+                        google_link = f"https://www.google.com/search?tbm=isch&q={pl_url}"
+
                         st.markdown(
                             f"**{pl}** — *{eng}* &nbsp;&nbsp;|&nbsp;&nbsp; "
-                            f"[Wikipedia 📖]({wiki_link}) &nbsp;&nbsp;|&nbsp;&nbsp; "
+                            f"[Wikipedia (EN) 📖]({wiki_link}) &nbsp;&nbsp;|&nbsp;&nbsp; "
                             f"[Google Grafika 📷]({google_link})"
                         )
-                        st.divider()
+                    st.divider()
 
 # Log streamlit load
 stream_version = st.__version__
