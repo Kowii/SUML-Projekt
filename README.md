@@ -200,19 +200,19 @@ Poniżej znajduje się krótka instrukcja wizualna przedstawiająca obsługę in
 ### Krok 1: Uruchomienie i Panel Główny
 Po poprawnym uruchomieniu kontenerów lub skryptów lokalnych otwórz przeglądarkę pod adresem [http://localhost:8501](http://localhost:8501). Zobaczysz główny panel aplikacji z informacjami o projekcie po lewej stronie oraz trzema krokami instrukcji na środku.
 
-![Krok 1 - Panel główny aplikacji](docs/images/krok1_dashboard.png)
+![Krok 1 - Panel główny aplikacji](docs/images/krok1.png)
 
 ### Krok 2: Wybór lub Przesłanie Obrazu
 Możesz przetestować aplikację klikając przycisk wyboru pod jednym z gotowych zdjęć przykładowych w sekcji **"Szybki test na przykładach"**, bądź przeciągnąć i upuścić własne zdjęcie ptaka (w formacie JPG, JPEG lub PNG) do obszaru wgrywania plików.
 
-![Krok 2 - Wgrywanie zdjęcia](docs/images/krok2_upload.png)
+![Krok 2 - Wgrywanie zdjęcia](docs/images/krok2.png)
 
 ### Krok 3: Analiza i Wyniki
 Aplikacja natychmiast wyśle zdjęcie do backendu, a po prawej stronie wyświetli wyniki klasyfikacji. Zobaczysz gatunek o najwyższym dopasowaniu (wraz z polską i angielską nazwą) oraz listę alternatywnych gatunków z wykresami słupkowymi. Kliknij przycisk **"Dowiedz się więcej"**, aby przejść do artykułu na Wikipedii.
 
-![Krok 3 - Odczytanie wyników analizy](docs/images/krok3_wyniki.png)
+![Krok 3 - Odczytanie wyników analizy](docs/images/krok3.png)
 
 ### Krok 4: Przeglądanie Encyklopedii Gatunków
 Przejdź do zakładki **"Baza gatunków (200 klas)"**, aby wyszukiwać ptaki według słów kluczowych lub przeglądać pełne drzewo systematyczne zintegrowane w bazie. Z tego poziomu możesz bezpośrednio szukać zdjęć ptaków w Google Grafika lub czytać o nich w encyklopedii.
 
-![Krok 4 - Przeglądanie encyklopedii](docs/images/krok4_encyklopedia.png)
+![Krok 4 - Przeglądanie encyklopedii](docs/images/krok4.png)
