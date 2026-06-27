@@ -132,7 +132,7 @@ Projekt opiera się na zbiorze danych **CUB-200-2011** (Caltech-UCSD Birds) zawi
 
 ### 🐳 Opcja A — Docker (rekomendowana)
 
-Upewnij się, że na Twoim komputerze są zainstalowane narzędzia [Docker](https://www.docker.com/) oraz [Docker Compose](https://docs.docker.com/compose/).
+Upewnij się, że na Twoim komputerze są zainstalowane narzędzia [Docker](https://www.docker.com/) oraz [Docker Compose](https://docs.docker.com/compose/) (w przypadku gdy wersja Dockera została wydana przed 2022, w nowszych wersjach Compose jest zintegrowany z Dockerem).
 
 Skopiuj szablon zmiennych środowiskowych:
 ```bash
